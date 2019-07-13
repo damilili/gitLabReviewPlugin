@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="cn.kuwo.intellij.plugin.ui.SettingUi">
+  <grid id="27dc6" binding="basePan" layout-manager="FormLayout">
+    <rowspec value="center:d:noGrow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="center:74px:noGrow"/>
+    <colspec value="left:73dlu:noGrow"/>
+    <colspec value="fill:775px:noGrow"/>
+    <constraints>
+      <xy x="20" y="8" width="967" height="185"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <grid id="54efb" layout-manager="FormLayout">
+        <rowspec value="center:d:grow"/>
+        <colspec value="fill:498px:grow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:230px:noGrow"/>
+        <constraints>
+          <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="21f91" class="javax.swing.JButton" binding="btToken">
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+              <forms/>
+            </constraints>
+            <properties>
+              <icon value="general/web.png"/>
+              <text value="Token Page"/>
+            </properties>
+          </component>
+          <component id="e89a4" class="javax.swing.JTextField" binding="token">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+              <forms defaultalign-horz="false"/>
+            </constraints>
+            <properties>
+              <text value=""/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <component id="5ee58" class="javax.swing.JComboBox" binding="repositoryList">
+        <constraints>
+          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties/>
+      </component>
+      <component id="411b5" class="javax.swing.JLabel">
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+          <forms defaultalign-horz="false"/>
+        </constraints>
+        <properties>
+          <text value="Remot Host:"/>
+        </properties>
+      </component>
+      <component id="b39b8" class="javax.swing.JLabel">
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+          <forms defaultalign-horz="false"/>
+        </constraints>
+        <properties>
+          <text value="Private Token:"/>
+        </properties>
+      </component>
+    </children>
+  </grid>
+</form>

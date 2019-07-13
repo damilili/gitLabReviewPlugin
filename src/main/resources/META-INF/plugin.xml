@@ -1,0 +1,36 @@
+<idea-plugin>
+    <id>cn.kuwo.intellij.GitReviewMerge</id>
+    <name>Plugin display name here</name>
+    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">亿览在线</vendor>
+
+    <description><![CDATA[
+    本插件用于辅助gitlab服务管理的项目代码合并<br>
+    <em>most HTML tags may be used</em>
+    ]]></description>
+
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <!-- uncomment to enable plugin in all products
+    <depends>com.intellij.modules.lang</depends>
+    -->
+    <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.vcs</depends>
+    <depends>Git4Idea</depends>
+    <!--<depends>Subversion</depends>-->
+    <extensions defaultExtensionNs="com.intellij">
+        <vcsConfigurableProvider implementation="cn.kuwo.intellij.plugin.ui.SettingUi$ConfigurableProvider"/>
+        <changesViewContent tabName="Merge Request" className="cn.kuwo.intellij.plugin.ui.MergeRequestContent"
+                            predicateClassName="cn.kuwo.intellij.plugin.ui.MergeRequestContent$VisibilityPredicate"/>
+    </extensions>
+
+    <actions>
+        <group id="GitMergeRequest.Toolbar">
+            <separator/>
+        </group>
+        <group id="GitLabGroup" text="Git _Lab" popup="true" icon="/icons/gitLabSmall.png">
+            <action id="Gitlab.Create.Merge.Request" class="cn.kuwo.intellij.plugin.actions.ActionAddMergeRequest"/>
+            <add-to-group group-id="Git.Menu"/>
+            <add-to-group group-id="Git.ContextMenu"/>
+        </group>
+    </actions>
+</idea-plugin>
