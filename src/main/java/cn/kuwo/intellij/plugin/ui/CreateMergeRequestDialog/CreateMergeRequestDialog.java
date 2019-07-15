@@ -4,19 +4,28 @@ import cn.kuwo.intellij.plugin.GitLabUtil;
 import cn.kuwo.intellij.plugin.bean.Branch;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.ui.ValidationInfo;
+import com.intellij.openapi.wm.StatusBar;
 import git4idea.GitRemoteBranch;
+import git4idea.GitUtil;
+import git4idea.repo.GitRemote;
+import git4idea.repo.GitRepository;
+import org.gitlab.api.models.GitlabProject;
 import org.gitlab.api.models.GitlabProjectMember;
-import org.gitlab.api.models.GitlabUser;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -37,12 +46,15 @@ public class CreateMergeRequestDialog extends DialogWrapper {
     private JCheckBox removeSourceBranch;
     private JCheckBox wip;
     private JComboBox sourceBranch;
+    private JComboBox repositoryBox;
+    private JLabel labelRepository;
     private ArrayList<Branch> remoteBranches;
     private GitLabUtil instance;
     private List<GitlabProjectMember> curGroupUser;
     public static final String key_lastAsssignee = "cn_kuwo_intellij_plugin_lastAssignee";
     public static final String key_lastSourceBranch = "cn_kuwo_intellij_plugin_lastSourceBranch";
     public static final String key_lastTargetBranch = "cn_kuwo_intellij_plugin_lastTargetBranch";
+    private GitRepository curRepository;
 
     public CreateMergeRequestDialog(@Nullable Project project) {
         super(project);
@@ -57,7 +69,32 @@ public class CreateMergeRequestDialog extends DialogWrapper {
         setTitle("Create Merge Request");
         setVerticalStretch(1f);
         instance = GitLabUtil.getInstance(project);
-        remoteBranches = instance.getRemoteBranches();
+        Collection<GitRepository> repositories1 = GitUtil.getRepositories(project);
+        GitRepository[] repositories = repositories1.toArray(new GitRepository[repositories1.size()]);
+        if (repositories.length > 1) {
+            labelRepository.setVisible(true);
+            repositoryBox.setVisible(true);
+        } else if (repositories.length == 1) {
+            labelRepository.setVisible(false);
+            repositoryBox.setVisible(false);
+        }
+        for (int i = 0; i < repositories.length; i++) {
+            GitRepository repository = repositories[i];
+            repositoryBox.addItem(repository.getRoot().getName());
+        }
+        repositoryBox.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                curRepository = repositories[repositoryBox.getSelectedIndex()];
+                refreshAll();
+            }
+        });
+        curRepository = repositories[repositoryBox.getSelectedIndex()];
+        remoteBranches = (ArrayList<Branch>) instance.getRemoteBranches(curRepository);
+        for (Branch branch : remoteBranches) {
+            sourceBranch.addItem(branch.repoName + "/" + branch.gitlabBranch.getName());
+            targetBranch.addItem(branch.repoName + "/" + branch.gitlabBranch.getName());
+        }
         diffButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -65,13 +102,15 @@ public class CreateMergeRequestDialog extends DialogWrapper {
                     Messages.showMessageDialog("Target branch must be different from source branch.", "Create Merge Request Fail", AllIcons.Ide.Error);
                     return;
                 }
-                instance.getDifBetweenBranchs(remoteBranches.get(sourceBranch.getSelectedIndex()), remoteBranches.get(targetBranch.getSelectedIndex()));
+                GitRepository repository = repositories[repositoryBox.getSelectedIndex()];
+                new Task.Backgroundable(project, "get diffrent between branchs...") {
+                    @Override
+                    public void run(@NotNull ProgressIndicator indicator) {
+                        instance.getDifBetweenBranchs(repository, remoteBranches.get(sourceBranch.getSelectedIndex()), remoteBranches.get(targetBranch.getSelectedIndex()));
+                    }
+                }.queue();
             }
         });
-        for (Branch branch : remoteBranches) {
-            sourceBranch.addItem(branch.repoName + "/" + branch.gitlabBranch.getName());
-            targetBranch.addItem(branch.repoName + "/" + branch.gitlabBranch.getName());
-        }
         GitRemoteBranch curLocalTrackedRemoteBranch = instance.getCurLocalTrackedRemoteBranch();
         sourceBranch.addItemListener(new ItemListener() {
             @Override
@@ -84,8 +123,7 @@ public class CreateMergeRequestDialog extends DialogWrapper {
             public void itemStateChanged(ItemEvent e) {
                 refreshTitle();
                 int selectedIndex = targetBranch.getSelectedIndex();
-                Branch branch = remoteBranches.get(selectedIndex);
-                refreshAssigeeBox(branch, null);
+                refreshAssigeeBox(remoteBranches.get(selectedIndex >= 0 ? selectedIndex : 0), null);
             }
         });
         PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(project);
@@ -93,10 +131,7 @@ public class CreateMergeRequestDialog extends DialogWrapper {
         String lastSource = propertiesComponent.getValue(key_lastSourceBranch);
         String lastTaget = propertiesComponent.getValue(key_lastTargetBranch);
         //源分支
-        if (curLocalTrackedRemoteBranch != null) {
-            String nameForRemoteOperations = curLocalTrackedRemoteBranch.getName();
-            sourceBranch.setSelectedItem(nameForRemoteOperations);
-        } else {
+        if (sourceBranch.getItemCount() > 0) {
             if (lastSource == null || lastSource.isEmpty()) {
                 sourceBranch.setSelectedIndex(0);
             } else {
@@ -104,16 +139,14 @@ public class CreateMergeRequestDialog extends DialogWrapper {
             }
         }
         //目标分支
-        if (lastTaget != null && !lastTaget.isEmpty()) {
-            if (targetBranch.getItemCount() > 0) {
-                Branch branch = remoteBranches.get(targetBranch.getSelectedIndex());
-                refreshAssigeeBox(branch, lastAssigneeId);
+        if (targetBranch.getItemCount() > 0) {
+            if (lastTaget != null && !lastTaget.isEmpty()) {
                 targetBranch.setSelectedItem(lastTaget);
-            }
-        } else {
-            if (targetBranch.getItemCount() > 0) {
+            } else {
                 targetBranch.setSelectedIndex(0);
-                Branch branch = remoteBranches.get(0);
+            }
+            if (targetBranch.getSelectedIndex() >= 0) {
+                Branch branch = remoteBranches.get(targetBranch.getSelectedIndex());
                 refreshAssigeeBox(branch, lastAssigneeId);
             }
         }
@@ -122,12 +155,46 @@ public class CreateMergeRequestDialog extends DialogWrapper {
         mergeTitle.addFocusListener(new JTextFieldHintListener(mergeTitle));
     }
 
-    private void refreshAssigeeBox(Branch branch, String lastAssigneeId) {
-        assigneeBox.removeAllItems();
-        curGroupUser = instance.getGroupUser(branch.repoName);
-        for (GitlabProjectMember gitlabProjectMember : curGroupUser) {
-            assigneeBox.addItem(gitlabProjectMember.getName());
+    private void refreshAll() {
+        remoteBranches = (ArrayList<Branch>) instance.getRemoteBranches(curRepository);
+        sourceBranch.removeAllItems();
+        targetBranch.removeAllItems();
+        for (Branch branch : remoteBranches) {
+            sourceBranch.addItem(branch.repoName + "/" + branch.gitlabBranch.getName());
+            targetBranch.addItem(branch.repoName + "/" + branch.gitlabBranch.getName());
         }
+        refreshTitle();
+        Branch branch = remoteBranches.get(targetBranch.getSelectedIndex());
+        refreshAssigeeBox(branch, null);
+    }
+
+    private void refreshAssigeeBox(Branch branch, String lastAssigneeId) {
+        new Task.Backgroundable(project, "get users info") {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+
+            }
+        }.queue();
+        assigneeBox.removeAllItems();
+        GitlabProject labProject = null;
+        for (GitRemote gitRemote : curRepository.getRemotes()) {
+            if (gitRemote.getName().equals(branch.repoName)) {
+                labProject = GitLabUtil.getInstance(project).getLabProject(gitRemote.getFirstUrl());
+                break;
+            }
+        }
+        if (labProject != null) {
+            curGroupUser = instance.getGroupUser(labProject);
+            for (GitlabProjectMember gitlabProjectMember : curGroupUser) {
+                assigneeBox.addItem(gitlabProjectMember.getName());
+            }
+        }
+        ApplicationManager.getApplication().invokeLater(new Runnable() {
+            @Override
+            public void run() {
+
+            }
+        });
         if (curGroupUser.size() > 0) {
             if (lastAssigneeId != null) {
                 curGroupUser.forEach(member -> {
@@ -174,7 +241,10 @@ public class CreateMergeRequestDialog extends DialogWrapper {
         propertiesComponent.setValue(key_lastAsssignee, String.valueOf(userId));
         propertiesComponent.setValue(key_lastSourceBranch, branchSource);
         propertiesComponent.setValue(key_lastTargetBranch, branchTarget);
-        GitLabUtil.getInstance(project).addMergeRequest(remoteBranches.get(sourceBranch.getSelectedIndex()), remoteBranches.get(targetBranch.getSelectedIndex()), userId, title);
+        boolean succ = GitLabUtil.getInstance(project).addMergeRequest(remoteBranches.get(sourceBranch.getSelectedIndex()), remoteBranches.get(targetBranch.getSelectedIndex()), userId, title);
+        if (succ) {
+            StatusBar.Info.set("Create Merge Request Success", project);
+        }
         super.doOKAction();
     }
 

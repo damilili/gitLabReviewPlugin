@@ -1,5 +1,6 @@
 package cn.kuwo.intellij.plugin.ui;
 
+import cn.kuwo.intellij.plugin.Constants;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.openapi.options.ConfigurationException;
@@ -66,13 +67,13 @@ public class SettingUi implements Configurable {
         if (repositoryList.getItemCount() > 0) {
             repositoryList.setSelectedIndex(0);
             PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(project);
-            token.setText(propertiesComponent.getValue((String) repositoryList.getSelectedItem()));
+            token.setText(propertiesComponent.getValue(Constants.PROPERTIEPRE+((String) repositoryList.getSelectedItem())));
         }
         btToken.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String currentRepo = (String) repositoryList.getSelectedItem();
-                String currentRepoTokenPage = "http://" + currentRepo+ "/profile/account";
+                String currentRepoTokenPage = "http://" + currentRepo + "/profile/account";
                 openWebPage(currentRepoTokenPage);
             }
         });
@@ -101,8 +102,7 @@ public class SettingUi implements Configurable {
             String currentRepo = (String) repositoryList.getSelectedItem();
             if (currentRepo != null && !currentRepo.isEmpty()) {
                 PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(project);
-                propertiesComponent.setValue(currentRepo, token.getText());
-                System.out.println(currentRepo + " click apply!!" + token.getText());
+                propertiesComponent.setValue(Constants.PROPERTIEPRE + currentRepo, token.getText());
             }
         }
 

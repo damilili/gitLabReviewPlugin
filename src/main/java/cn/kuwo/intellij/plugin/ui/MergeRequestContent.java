@@ -76,7 +76,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                 targetBranch.repoName = "origin";
                 targetBranch.gitlabBranch = new GitlabBranch();
                 targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
-                GitLabUtil.getInstance(project).getDifBetweenBranchs(srcBranch, targetBranch);
+                GitLabUtil.getInstance(project).getDifBetweenBranchs(null,srcBranch, targetBranch);
             }
         });
         RMListObservable.getInstance().addObserver(requestListObserver);

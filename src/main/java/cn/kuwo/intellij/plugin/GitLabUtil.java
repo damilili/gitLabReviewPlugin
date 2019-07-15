@@ -4,6 +4,7 @@ import cn.kuwo.intellij.plugin.bean.Branch;
 import com.google.gson.Gson;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.Couple;
@@ -31,9 +32,7 @@ import org.gitlab.api.models.GitlabProjectMember;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,6 +40,7 @@ public class GitLabUtil {
     private static GitLabUtil instance;
     private Project project;
     private GitlabAPI gitlabAPI;
+    private Map<String, GitlabAPI> gitlabAPIs = new HashMap<>();
 
     private GitLabUtil(Project project) {
         this.project = project;
@@ -59,25 +59,48 @@ public class GitLabUtil {
     }
 
     private void init() {
+        Collection<GitRepository> repositories = GitUtil.getRepositories(project);
+        repositories.forEach(repo -> repo.getRemotes().forEach(remote -> {
+            String firstUrl = remote.getFirstUrl();
+            String remoteHost = getRemoteHost(firstUrl);
+            GitlabAPI gitlabAPI = GitlabAPI.connect("https://" + remoteHost, getToken(remoteHost), TokenType.PRIVATE_TOKEN, AuthMethod.URL_PARAMETER);
+            gitlabAPIs.put(remoteHost, gitlabAPI);
+        }));
     }
 
-    private GitlabProject getLabProject(String remote) {
-        String remoteHost = getRemoteHost(remote);
-        if (remoteHost != null) {
-            if (gitlabAPI == null) {
-                gitlabAPI = GitlabAPI.connect("https://" + remoteHost, getToken(remote), TokenType.PRIVATE_TOKEN, AuthMethod.URL_PARAMETER);
-            }
-            GitRepositoryManager repositoryManager = GitUtil.getRepositoryManager(project);
-            repositoryManager.getRepositoryForFile(project.getBaseDir());
-            try {
-                List<GitlabProject> memberProjects = gitlabAPI.getProjects();
-                for (GitlabProject memberProject : memberProjects) {
-                    if (urlMatch(remote, memberProject.getSshUrl()) || urlMatch(remote, memberProject.getHttpUrl())) {
-                        return memberProject;
-                    }
+    public void refreshToken(String remoteHost) {
+        GitlabAPI gitlabAPI = GitlabAPI.connect("https://" + remoteHost, getToken(remoteHost), TokenType.PRIVATE_TOKEN, AuthMethod.URL_PARAMETER);
+        gitlabAPIs.put(remoteHost, gitlabAPI);
+    }
+
+    public GitlabAPI getGitlabAPI(String urlOrHost) {
+        String host = getRemoteHost(urlOrHost);
+        GitlabAPI gitlabAPI = gitlabAPIs.get(host);
+        if (gitlabAPI == null) {
+            gitlabAPI = GitlabAPI.connect("https://" + urlOrHost, getToken(urlOrHost), TokenType.PRIVATE_TOKEN, AuthMethod.URL_PARAMETER);
+            gitlabAPIs.put(host, gitlabAPI);
+        }
+        return gitlabAPI;
+    }
+
+    public GitlabProject getLabProject(String remote) {
+        GitlabAPI gitlabAPI = getGitlabAPI(remote);
+        try {
+            List<GitlabProject> memberProjects = gitlabAPI.getProjects();
+            for (GitlabProject memberProject : memberProjects) {
+                if (urlMatch(remote, memberProject.getSshUrl()) || urlMatch(remote, memberProject.getHttpUrl())) {
+                    return memberProject;
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Error error) {
+            Throwable cause = error.getCause();
+            String message = cause.getMessage();
+            if (message != null && message.contains("401")) {
+                Messages.showMessageDialog("Unauthorized", "Create Merge Request Fail", AllIcons.Ide.Error);
+            } else {
+                Messages.showMessageDialog(message, "Create Merge Request Fail", AllIcons.Ide.Error);
             }
         }
         return null;
@@ -87,7 +110,7 @@ public class GitLabUtil {
     private String getRemoteHost(String remote) {
         Pattern compile = Pattern.compile("(?<=(http(s)?://))[\\w|\\.]*");
         Matcher matcher = compile.matcher(remote);
-        String remoteHost = null;
+        String remoteHost = remote;
         if (matcher.find()) {
             remoteHost = matcher.group();
         } else {
@@ -142,19 +165,8 @@ public class GitLabUtil {
      * @param title    标题
      * @return 是否成功
      */
-    public boolean addMergeRequest(Branch from, Branch to, int assignee, String title) {
-        if (gitlabAPI == null) {
-            Collection<GitRepository> repositories = GitUtil.getRepositories(project);
-            for (GitRepository repository : repositories) {
-                for (GitRemote gitRemote : repository.getRemotes()) {
-                    if (gitRemote.getName() != null && gitRemote.getName().equals(from.repoName)) {
-                        String remoteHost = getRemoteHost(gitRemote.getFirstUrl());
-                        gitlabAPI = GitlabAPI.connect("https://" + remoteHost, getToken(gitRemote.getFirstUrl()), TokenType.PRIVATE_TOKEN, AuthMethod.URL_PARAMETER);
-                        break;
-                    }
-                }
-            }
-        }
+    public boolean addMergeRequest( Branch from, Branch to, int assignee, String title) {
+        GitlabAPI gitlabAPI = getGitlabAPI(from.gitlabProject.getHttpUrl());
         if (gitlabAPI != null) {
             if (from != null && from.gitlabProject != null) {
                 Integer id = from.gitlabProject.getId();
@@ -215,6 +227,39 @@ public class GitLabUtil {
         return result;
     }
 
+    public List<Branch> getRemoteBranches(GitRepository gitRepository) {
+        ArrayList<Branch> result = new ArrayList<>();
+        HashSet<String> tem = new HashSet<>();
+        Collection<GitRemote> remotes1 = gitRepository.getRemotes();
+        GitRemote[] remoteArr = remotes1.toArray(new GitRemote[remotes1.size()]);
+        for (int i = remoteArr.length - 1; i >= 0; i--) {
+            GitRemote gitRemote = remoteArr[i];
+            if (tem.contains(gitRemote.getFirstUrl())) {
+                continue;
+            } else {
+                tem.add(gitRemote.getFirstUrl());
+            }
+            GitlabAPI gitlabAPI = getGitlabAPI(gitRemote.getFirstUrl());
+            GitlabProject labProject = getLabProject(gitRemote.getFirstUrl());
+            String name = gitRemote.getName();
+            if (labProject != null) {
+                try {
+                    List<GitlabBranch> branches = gitlabAPI.getBranches(labProject);
+                    for (GitlabBranch branch : branches) {
+                        Branch branch1 = new Branch();
+                        branch1.gitlabBranch = branch;
+                        branch1.repoName = name;
+                        branch1.gitlabProject = labProject;
+                        result.add(branch1);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return result;
+    }
+
     public GitRemoteBranch getCurLocalTrackedRemoteBranch() {
         for (GitRepository repository : GitUtil.getRepositories(project)) {
             GitRemoteBranch trackedBranch = repository.getCurrentBranch().findTrackedBranch(repository);
@@ -223,39 +268,35 @@ public class GitLabUtil {
         return null;
     }
 
-    public List<GitlabProjectMember> getGroupUser(String remoteRepoName) {
-        for (GitRepository gitRepository : GitUtil.getRepositories(project)) {
-            for (GitRemote gitRemote : gitRepository.getRemotes()) {
-                if (gitRemote.getName().equals(remoteRepoName)) {
-                    GitlabProject labProject = getLabProject(gitRemote.getFirstUrl());
-                    try {
-                        return gitlabAPI.getProjectMembers(labProject);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+    public List<GitlabProjectMember> getGroupUser(GitlabProject labProject) {
+        try {
+            return getGitlabAPI(labProject.getHttpUrl()).getProjectMembers(labProject);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
         return null;
     }
 
-    public void getDifBetweenBranchs(Branch srcBranch, Branch targetBranch) {
-        Collection<GitRepository> repositories = GitUtil.getRepositories(project);
-        for (GitRepository repository : repositories) {
-            try {
-                String oldRevision = srcBranch.repoName + "/" + srcBranch.gitlabBranch.getName();
-                String newRevision = targetBranch.repoName + "/" + targetBranch.gitlabBranch.getName();
-                Collection<Change> diff = GitChangeUtils.getDiff(project, repository.getRoot(), oldRevision, newRevision, null);
-                GitCommitCompareInfo info = new GitCommitCompareInfo(GitCommitCompareInfo.InfoType.BOTH);
-                info.put(repository, diff);
-                List<GitCommit> commits1 = GitHistoryUtils.history(project, repository.getRoot(), ".." + oldRevision);
-                List<GitCommit> commits2 = GitHistoryUtils.history(project, repository.getRoot(), newRevision + "..");
-                info.put(repository, Couple.of(commits2, commits1));
-                GitCompareBranchesDialog dialog = new GitCompareBranchesDialog(project, oldRevision, newRevision, info, repository, true);
-                dialog.show();
-            } catch (VcsException e) {
-                e.printStackTrace();
-            }
+    public void getDifBetweenBranchs(GitRepository gitRepository, Branch srcBranch, Branch targetBranch) {
+        try {
+            String oldRevision = srcBranch.repoName + "/" + srcBranch.gitlabBranch.getName();
+            String newRevision = targetBranch.repoName + "/" + targetBranch.gitlabBranch.getName();
+            Collection<Change> diff = GitChangeUtils.getDiff(project, gitRepository.getRoot(), oldRevision, newRevision, null);
+            GitCommitCompareInfo info = new GitCommitCompareInfo(GitCommitCompareInfo.InfoType.BOTH);
+            info.put(gitRepository, diff);
+            List<GitCommit> commits1 = GitHistoryUtils.history(project, gitRepository.getRoot(), ".." + oldRevision);
+            List<GitCommit> commits2 = GitHistoryUtils.history(project, gitRepository.getRoot(), newRevision + "..");
+            info.put(gitRepository, Couple.of(commits2, commits1));
+            ApplicationManager.getApplication().invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    GitCompareBranchesDialog dialog = new GitCompareBranchesDialog(project, oldRevision, newRevision, info, gitRepository, true);
+                    dialog.show();
+                }
+            });
+        } catch (VcsException e) {
+            e.printStackTrace();
         }
     }
 
