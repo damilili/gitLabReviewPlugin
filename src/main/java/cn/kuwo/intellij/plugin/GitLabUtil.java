@@ -274,12 +274,12 @@ public class GitLabUtil {
         return null;
     }
 
-    public void getDifBetweenBranchs(GitRepository gitRepository, Branch srcBranch, Branch targetBranch) {
+    public void showDifBetweenBranchs(GitRepository gitRepository, Branch srcBranch, Branch targetBranch) {
         try {
             String oldRevision = srcBranch.repoName + "/" + srcBranch.gitlabBranch.getName();
             String newRevision = targetBranch.repoName + "/" + targetBranch.gitlabBranch.getName();
-            List<GitCommit> commits1 = GitHistoryUtils.history(project, gitRepository.getRoot(), newRevision+".." + oldRevision);
-            List<GitCommit> commits2 = GitHistoryUtils.history(project, gitRepository.getRoot(), oldRevision + ".."+newRevision);
+            List<GitCommit> commits1 = GitHistoryUtils.history(project, gitRepository.getRoot(), newRevision + ".." + oldRevision);
+            List<GitCommit> commits2 = GitHistoryUtils.history(project, gitRepository.getRoot(), oldRevision + ".." + newRevision);
             Collection<Change> diff = GitChangeUtils.getDiff(project, gitRepository.getRoot(), oldRevision, newRevision, null);
             GitCommitCompareInfo info = new GitCommitCompareInfo(GitCommitCompareInfo.InfoType.BOTH);
             info.put(gitRepository, diff);
@@ -294,6 +294,18 @@ public class GitLabUtil {
         } catch (VcsException e) {
             e.printStackTrace();
         }
+    }
+
+    public List<GitCommit> getDiffBetweenBranchs(GitRepository gitRepository, Branch srcBranch, Branch targetBranch) {
+        String oldRevision = srcBranch.repoName + "/" + srcBranch.gitlabBranch.getName();
+        String newRevision = targetBranch.repoName + "/" + targetBranch.gitlabBranch.getName();
+        List<GitCommit> diffCommits = null;
+        try {
+            diffCommits = GitHistoryUtils.history(project, gitRepository.getRoot(),  newRevision+ ".." + oldRevision);
+        } catch (VcsException e) {
+            e.printStackTrace();
+        }
+        return diffCommits;
     }
 
     public String getLabProById(int id) {

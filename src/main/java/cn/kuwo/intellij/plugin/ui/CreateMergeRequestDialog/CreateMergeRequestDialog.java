@@ -10,6 +10,7 @@ import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.ui.ValidationInfo;
 import com.intellij.openapi.wm.StatusBar;
+import git4idea.GitCommit;
 import git4idea.GitUtil;
 import git4idea.repo.GitRemote;
 import git4idea.repo.GitRepository;
@@ -90,7 +91,7 @@ public class CreateMergeRequestDialog extends DialogWrapper {
                 new Task.Backgroundable(project, "Get Different Between Branchs...") {
                     @Override
                     public void run(@NotNull ProgressIndicator indicator) {
-                        gitlabUtil.getDifBetweenBranchs(curRepository, curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()));
+                        gitlabUtil.showDifBetweenBranchs(curRepository, curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()));
                     }
                 }.queue();
             }
@@ -126,9 +127,14 @@ public class CreateMergeRequestDialog extends DialogWrapper {
             Messages.showMessageDialog("Merge title cannot be empty.", "Create Merge Request Fail", AllIcons.Ide.Error);
             return;
         }
-        boolean succ = GitLabUtil.getInstance(project).addMergeRequest(curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()), userId, title);
-        if (succ) {
-            StatusBar.Info.set("Create Merge Request Success", project);
+        List<GitCommit> diffBetweenBranchs = gitlabUtil.getDiffBetweenBranchs(curRepository, curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()));
+        if (diffBetweenBranchs != null && diffBetweenBranchs.size() > 0) {
+            boolean succ = GitLabUtil.getInstance(project).addMergeRequest(curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()), userId, title);
+            if (succ) {
+                StatusBar.Info.set("Create Merge Request Success", project);
+            }
+        }else {
+            Messages.showMessageDialog("The source branch has been merged to target branch.", "Create Merge Request Fail", AllIcons.Ide.Error);
         }
         super.doOKAction();
     }

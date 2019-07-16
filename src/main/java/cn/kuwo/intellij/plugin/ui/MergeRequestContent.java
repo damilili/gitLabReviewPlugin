@@ -16,7 +16,6 @@ import com.intellij.openapi.vcs.changes.ui.ChangesViewContentProvider;
 import com.intellij.openapi.vcs.ui.SearchFieldAction;
 import com.intellij.util.NotNullFunction;
 import git4idea.GitVcs;
-import icons.Git4ideaIcons;
 import org.gitlab.api.models.GitlabBranch;
 import org.gitlab.api.models.GitlabMergeRequest;
 import org.jetbrains.annotations.NotNull;
@@ -76,7 +75,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                 targetBranch.repoName = "origin";
                 targetBranch.gitlabBranch = new GitlabBranch();
                 targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
-                GitLabUtil.getInstance(project).getDifBetweenBranchs(null,srcBranch, targetBranch);
+                GitLabUtil.getInstance(project).showDifBetweenBranchs(null, srcBranch, targetBranch);
             }
         });
         RMListObservable.getInstance().addObserver(requestListObserver);
@@ -137,7 +136,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
             if (arrayList == null) {
                 return null;
             }
-            return arrayList.get(arrayList.size() - index - 1);
+            return arrayList.get(index);
         }
 
         @Override
