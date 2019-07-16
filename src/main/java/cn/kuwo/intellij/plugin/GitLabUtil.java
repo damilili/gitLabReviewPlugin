@@ -39,7 +39,6 @@ import java.util.regex.Pattern;
 public class GitLabUtil {
     private static GitLabUtil instance;
     private Project project;
-    private GitlabAPI gitlabAPI;
     private Map<String, GitlabAPI> gitlabAPIs = new HashMap<>();
 
     private GitLabUtil(Project project) {
@@ -138,10 +137,7 @@ public class GitLabUtil {
                     String token = getToken(remote.getFirstUrl());
                     if (token != null && !token.isEmpty()) {
                         GitlabProject labProject = getLabProject(remote.getFirstUrl());
-                        if (labProject != null) {
-                            List<GitlabMergeRequest> mergedMergeRequests = gitlabAPI.getMergeRequests(labProject);
-                            gitlabMergeRequests.addAll(mergedMergeRequests);
-                        }
+                        gitlabMergeRequests.addAll(getGitlabAPI(remote.getFirstUrl()).getMergeRequests(labProject));
                     }
                 }
             }
@@ -165,7 +161,7 @@ public class GitLabUtil {
      * @param title    标题
      * @return 是否成功
      */
-    public boolean addMergeRequest( Branch from, Branch to, int assignee, String title) {
+    public boolean addMergeRequest(Branch from, Branch to, int assignee, String title) {
         GitlabAPI gitlabAPI = getGitlabAPI(from.gitlabProject.getHttpUrl());
         if (gitlabAPI != null) {
             if (from != null && from.gitlabProject != null) {
@@ -210,7 +206,7 @@ public class GitLabUtil {
                 String name = remote.getName();
                 GitlabProject labProject = getLabProject(remote.getFirstUrl());
                 try {
-                    List<GitlabBranch> branches = gitlabAPI.getBranches(labProject.getId());
+                    List<GitlabBranch> branches = getGitlabAPI(remote.getFirstUrl()).getBranches(labProject.getId());
                     for (GitlabBranch branch : branches) {
                         Branch tem = new Branch();
                         tem.gitlabProject = labProject;
@@ -282,12 +278,12 @@ public class GitLabUtil {
         try {
             String oldRevision = srcBranch.repoName + "/" + srcBranch.gitlabBranch.getName();
             String newRevision = targetBranch.repoName + "/" + targetBranch.gitlabBranch.getName();
+            List<GitCommit> commits1 = GitHistoryUtils.history(project, gitRepository.getRoot(), newRevision+".." + oldRevision);
+            List<GitCommit> commits2 = GitHistoryUtils.history(project, gitRepository.getRoot(), oldRevision + ".."+newRevision);
             Collection<Change> diff = GitChangeUtils.getDiff(project, gitRepository.getRoot(), oldRevision, newRevision, null);
             GitCommitCompareInfo info = new GitCommitCompareInfo(GitCommitCompareInfo.InfoType.BOTH);
             info.put(gitRepository, diff);
-            List<GitCommit> commits1 = GitHistoryUtils.history(project, gitRepository.getRoot(), ".." + oldRevision);
-            List<GitCommit> commits2 = GitHistoryUtils.history(project, gitRepository.getRoot(), newRevision + "..");
-            info.put(gitRepository, Couple.of(commits2, commits1));
+            info.put(gitRepository, Couple.of(commits1, commits2));
             ApplicationManager.getApplication().invokeLater(new Runnable() {
                 @Override
                 public void run() {
