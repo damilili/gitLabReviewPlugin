@@ -27,6 +27,9 @@
         <group id="GitMergeRequest.Toolbar">
             <separator/>
         </group>
+        <group id="GitMergeRequest.Detail">
+            <separator/>
+        </group>
         <group id="GitLabGroup" text="Git _Lab" popup="true" icon="/icons/gitLabSmall.png">
             <action id="Gitlab.Create.Merge.Request" class="cn.kuwo.intellij.plugin.actions.ActionAddMergeRequest"/>
             <add-to-group group-id="Git.Menu"/>

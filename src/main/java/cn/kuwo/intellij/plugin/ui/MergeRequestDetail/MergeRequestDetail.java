@@ -1,28 +1,37 @@
 package cn.kuwo.intellij.plugin.ui.MergeRequestDetail;
 
-import cn.kuwo.intellij.plugin.GitLabUtil;
+import cn.kuwo.intellij.plugin.RMListObservable;
+import cn.kuwo.intellij.plugin.actions.*;
+import cn.kuwo.intellij.plugin.bean.FilterBean;
 import cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell.BaseMergeRequestCell;
+import com.intellij.openapi.actionSystem.ActionManager;
+import com.intellij.openapi.actionSystem.ActionToolbar;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.project.Project;
-import org.gitlab.api.GitlabAPI;
+import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import org.gitlab.api.models.GitlabMergeRequest;
-import org.gitlab.api.models.GitlabProject;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
+import java.util.Observable;
+import java.util.Observer;
 
 public class MergeRequestDetail {
     private Project project;
     private GitlabMergeRequest mergeRequest;
+    private SimpleToolWindowPanel basePan;
+    private static ActionToolbar actionToolbar;
 
     public static MergeRequestDetail getMergeRequestDetail(Project project, GitlabMergeRequest mergeRequest) {
         MergeRequestDetail mergeRequestCell = new MergeRequestDetail(project);
         if (mergeRequest != null) {
             mergeRequestCell.inflateView(mergeRequest);
         } else {
-            mergeRequestCell.getBasePan().setVisible(false);
+            mergeRequestCell.panel1.setVisible(false);
         }
         return mergeRequestCell;
     }
@@ -39,13 +48,19 @@ public class MergeRequestDetail {
         getTargetBranch().setText(mergeRequest.getTargetBranch());
         getDescription().setText(mergeRequest.getDescription());
         getState().setText(mergeRequest.getState());
-        getBasePan().setVisible(true);
+        panel1.setVisible(true);
         setWebUrl();
     }
 
     public MergeRequestDetail(Project project) {
         this.project = project;
-        getBasePan().setVisible(false);
+        panel1.setVisible(false);
+        RMListObservable.getInstance().addObserver(new Observer() {
+            @Override
+            public void update(Observable o, Object arg) {
+                inflateView(mergeRequest);
+            }
+        });
     }
 
     public void refresh(GitlabMergeRequest mergeRequest) {
@@ -54,7 +69,39 @@ public class MergeRequestDetail {
 
     public JPanel getBasePan() {
 //        panel1.setBackground(new Color(0, 0x2b, 0x2b, 0x2b));
-        return panel1;
+        if (basePan == null) {
+            basePan = new SimpleToolWindowPanel(true, true);
+            ActionToolbar actionToolbar = getDetailToolBar(project);
+            actionToolbar.setTargetComponent(panel1);
+            basePan.setToolbar(actionToolbar.getComponent());
+            basePan.setContent(panel1);
+        }
+        return basePan;
+    }
+
+    private ActionToolbar getDetailToolBar(Project project) {
+        if (actionToolbar == null) {
+            DefaultActionGroup toolBarActionGroup = (DefaultActionGroup) ActionManager.getInstance().getAction("GitMergeRequest.Detail");
+            //diff
+            DiffAction diffAction = new DiffAction();
+            toolBarActionGroup.add(diffAction);
+            // comment
+            CommentAction commentAction = new CommentAction();
+            toolBarActionGroup.add(commentAction);
+            //close
+            CloseAction closeAction = new CloseAction();
+            toolBarActionGroup.add(closeAction);
+            //accept
+            AcceptAction acceptAction = new AcceptAction();
+            toolBarActionGroup.add(acceptAction);
+            actionToolbar = ActionManager.getInstance().createActionToolbar("GitMergeRequest.Detail", toolBarActionGroup, true);
+        }
+        for (AnAction anAction : actionToolbar.getActions()) {
+            if (anAction instanceof RequestDetailAction) {
+                ((RequestDetailAction) anAction).setRequest(mergeRequest);
+            }
+        }
+        return actionToolbar;
     }
 
     public void setPanel1(JPanel panel1) {

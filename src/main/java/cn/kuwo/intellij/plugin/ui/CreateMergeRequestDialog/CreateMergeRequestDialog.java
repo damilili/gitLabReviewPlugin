@@ -14,6 +14,7 @@ import git4idea.GitCommit;
 import git4idea.GitUtil;
 import git4idea.repo.GitRemote;
 import git4idea.repo.GitRepository;
+import org.gitlab.api.models.GitlabMergeRequest;
 import org.gitlab.api.models.GitlabProject;
 import org.gitlab.api.models.GitlabProjectMember;
 import org.jetbrains.annotations.NotNull;
@@ -45,6 +46,7 @@ public class CreateMergeRequestDialog extends DialogWrapper {
     private JComboBox repositoryBox;
     private JLabel labelRepository;
     private JComboBox remoteBox;
+    private JTextArea desTextArea;
     private GitLabUtil gitlabUtil;
 
     private GitRepository curRepository;
@@ -129,10 +131,12 @@ public class CreateMergeRequestDialog extends DialogWrapper {
         }
         List<GitCommit> diffBetweenBranchs = gitlabUtil.getDiffBetweenBranchs(curRepository, curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()));
         if (diffBetweenBranchs != null && diffBetweenBranchs.size() > 0) {
-            boolean succ = GitLabUtil.getInstance(project).addMergeRequest(curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()), userId, title);
-            if (succ) {
+            GitLabUtil instance = GitLabUtil.getInstance(project);
+            GitlabMergeRequest gitlabMergeRequest = instance.addMergeRequest(curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()), userId, title);
+            if (gitlabMergeRequest != null) {
                 StatusBar.Info.set("Create Merge Request Success", project);
             }
+            instance.getAllRequest();
         } else {
             Messages.showMessageDialog("Nothing to merge from " + branchSource + "into " + branchTarget + ".", "Create Merge Request Fail", AllIcons.Ide.Error);
         }

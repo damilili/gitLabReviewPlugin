@@ -5,11 +5,15 @@ import com.google.gson.Gson;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.progress.EmptyProgressIndicator;
+import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.Couple;
 import com.intellij.openapi.vcs.VcsException;
 import com.intellij.openapi.vcs.changes.Change;
+import com.intellij.openapi.wm.StatusBar;
+import com.intellij.util.ThrowableConvertor;
 import git4idea.GitCommit;
 import git4idea.GitRemoteBranch;
 import git4idea.GitUtil;
@@ -19,6 +23,8 @@ import git4idea.repo.GitRemote;
 import git4idea.repo.GitRepository;
 import git4idea.repo.GitRepositoryManager;
 import git4idea.ui.branch.GitCompareBranchesDialog;
+import git4idea.update.GitFetchResult;
+import git4idea.update.GitFetcher;
 import git4idea.util.GitCommitCompareInfo;
 import org.apache.commons.lang.StringUtils;
 import org.gitlab.api.AuthMethod;
@@ -26,10 +32,13 @@ import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.GitlabAPIException;
 import org.gitlab.api.TokenType;
 import org.gitlab.api.models.*;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -161,16 +170,14 @@ public class GitLabUtil {
      * @param title    标题
      * @return 是否成功
      */
-    public boolean addMergeRequest(Branch from, Branch to, int assignee, String title) {
+    public GitlabMergeRequest addMergeRequest(Branch from, Branch to, int assignee, String title) {
         GitlabAPI gitlabAPI = getGitlabAPI(from.gitlabProject.getHttpUrl());
         if (gitlabAPI != null) {
             if (from != null && from.gitlabProject != null) {
                 Integer id = from.gitlabProject.getId();
                 try {
                     GitlabMergeRequest mergeRequest = gitlabAPI.createMergeRequest(id, from.gitlabBranch.getName(), to.gitlabBranch.getName(), assignee, title);
-                    if (mergeRequest.getId() != 0) {
-                        return true;
-                    }
+                    return mergeRequest;
                 } catch (IOException e) {
                     String message = "Create Merge Request Fail";
                     e.printStackTrace();
@@ -185,7 +192,7 @@ public class GitLabUtil {
                 }
             }
         }
-        return false;
+        return null;
     }
 
     private boolean urlMatch(String remoteUrl, String apiUrl) {
@@ -276,6 +283,11 @@ public class GitLabUtil {
 
     public void showDifBetweenBranchs(GitRepository gitRepository, Branch srcBranch, Branch targetBranch) {
         try {
+            GitFetchResult result = new GitFetcher(project, new EmptyProgressIndicator(), false).fetch(gitRepository.getRoot(), srcBranch.repoName, null);
+            if (!result.isSuccess()) {
+                GitFetcher.displayFetchResult(project, result, null, result.getErrors());
+                return;
+            }
             String oldRevision = srcBranch.repoName + "/" + srcBranch.gitlabBranch.getName();
             String newRevision = targetBranch.repoName + "/" + targetBranch.gitlabBranch.getName();
             List<GitCommit> commits1 = GitHistoryUtils.history(project, gitRepository.getRoot(), newRevision + ".." + oldRevision);
@@ -292,6 +304,57 @@ public class GitLabUtil {
                 }
             });
         } catch (VcsException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void commentRequest(GitlabMergeRequest mergeRequest, String des) {
+    }
+
+    public void getDiscussions(GitlabMergeRequest mergeRequest, String des) {
+//        /projects/:id/merge_requests/:merge_request_iid/discussions
+    }
+
+    public void updateRequest(GitlabMergeRequest mergeRequest, String targetBranch, String title, String des, int assigneeId) {
+        GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
+        try {
+            GitlabMergeRequest gitlabMergeRequest = gitlabAPI.updateMergeRequest(getLabProject(mergeRequest.getWebUrl()).getId(), mergeRequest.getId(), targetBranch, assigneeId, title, des, null, null);
+            mergeRequest.setAssignee(gitlabMergeRequest.getAssignee());
+            mergeRequest.setDescription(gitlabMergeRequest.getDescription());
+            mergeRequest.setTitle(gitlabMergeRequest.getTitle());
+            mergeRequest.setId(gitlabMergeRequest.getId());
+            mergeRequest.setIid(gitlabMergeRequest.getIid());
+            mergeRequest.setState(gitlabMergeRequest.getState());
+            mergeRequest.setCreatedAt(gitlabMergeRequest.getCreatedAt());
+            mergeRequest.setUpdatedAt(gitlabMergeRequest.getUpdatedAt());
+            mergeRequest.setSha(gitlabMergeRequest.getSha());
+            mergeRequest.setMergeStatus(gitlabMergeRequest.getMergeStatus());
+            RMListObservable.getInstance().refreshList();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void closeRequest(GitlabMergeRequest mergeRequest) {
+        GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
+        try {
+            GitlabMergeRequest gitlabMergeRequest = gitlabAPI.updateMergeRequest(getLabProject(mergeRequest.getWebUrl()).getId(), mergeRequest.getId(), mergeRequest.getTargetBranch(), gitlabAPI.getUser().getId(), null, null, "close", null);
+            if (gitlabMergeRequest != null) {
+                StatusBar.Info.set("Close Merge Request Success", project);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void acceptRequest(GitlabMergeRequest mergeRequest) {
+        GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
+        try {
+            GitlabMergeRequest gitlabMergeRequest = gitlabAPI.acceptMergeRequest(getLabProject(mergeRequest.getWebUrl()), mergeRequest.getId(), "Merge branch " + mergeRequest.getSourceBranch() + " into " + mergeRequest.getTargetBranch());
+            if (gitlabMergeRequest != null) {
+                StatusBar.Info.set("Merge Request Success", project);
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -322,13 +385,13 @@ public class GitLabUtil {
 
     public String getMergeReqestDetailUrl(GitlabMergeRequest mergeRequest) {
         try {
-            getGitlabAPI(mergeRequest.getWebUrl()).getMergeRequest(getLabProject(mergeRequest.getWebUrl()),mergeRequest.getId());
+            getGitlabAPI(mergeRequest.getWebUrl()).getMergeRequest(getLabProject(mergeRequest.getWebUrl()), mergeRequest.getId());
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         String remoteHost = getRemoteHost(mergeRequest.getWebUrl());
-        return "http://"+remoteHost+GitlabProject.URL + "/" + getLabProject(mergeRequest.getWebUrl()).getId() + "/merge_request/" + mergeRequest.getId();
+        return "http://" + remoteHost + GitlabProject.URL + "/" + getLabProject(mergeRequest.getWebUrl()).getId() + "/merge_request/" + mergeRequest.getId();
     }
 
     class ErrMessage {
