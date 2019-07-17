@@ -9,10 +9,12 @@ import com.intellij.openapi.progress.Task;
 import git4idea.GitUtil;
 import git4idea.repo.GitRemote;
 import git4idea.repo.GitRepository;
+import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.GitlabBranch;
 import org.gitlab.api.models.GitlabProject;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.List;
 
 public final class DiffAction extends RequestDetailAction {
@@ -26,7 +28,18 @@ public final class DiffAction extends RequestDetailAction {
         GitLabUtil instance = GitLabUtil.getInstance(e.getProject());
         Branch branchSrc = new Branch();
         Branch branchTraget = new Branch();
-        GitlabProject labProject = instance.getLabProject(mergeRequest.getWebUrl());
+        GitlabProject srcLabProject = null, targetProject = null;
+        GitlabAPI gitlabAPI = instance.getGitlabAPI(mergeRequest.getWebUrl());
+        try {
+            srcLabProject = gitlabAPI.getProject(mergeRequest.getSourceProjectId());
+            if (mergeRequest.getSourceProjectId().intValue() != mergeRequest.getTargetProjectId()) {
+                targetProject = gitlabAPI.getProject(mergeRequest.getTargetProjectId());
+            } else {
+                targetProject = srcLabProject;
+            }
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
         GitRepository gitRepository = null;
         out:
         for (GitRepository temGitRepository : GitUtil.getRepositories(e.getProject())) {
@@ -43,8 +56,8 @@ public final class DiffAction extends RequestDetailAction {
             }
         }
         if (gitRepository != null && branchSrc.repoName != null && !branchSrc.repoName.isEmpty()) {
-            branchSrc.gitlabProject = labProject;
-            branchTraget.gitlabProject = labProject;
+            branchSrc.gitlabProject = srcLabProject;
+            branchTraget.gitlabProject = targetProject;
             branchSrc.gitlabBranch = new GitlabBranch();
             branchTraget.gitlabBranch = new GitlabBranch();
             branchSrc.gitlabBranch.setName(mergeRequest.getSourceBranch());

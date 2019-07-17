@@ -1,6 +1,7 @@
 package cn.kuwo.intellij.plugin;
 
 import cn.kuwo.intellij.plugin.bean.Branch;
+import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
 import com.google.gson.Gson;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
@@ -88,15 +89,20 @@ public class GitLabUtil {
         return gitlabAPI;
     }
 
+
     public GitlabProject getLabProject(String remote) {
+        for (GitlabProject gitlabProject : getLabProjects(remote)) {
+            if (urlMatch(remote, gitlabProject.getSshUrl()) || urlMatch(remote, gitlabProject.getHttpUrl())) {
+                return gitlabProject;
+            }
+        }
+        return null;
+    }
+
+    public List<GitlabProject> getLabProjects(String remote) {
         GitlabAPI gitlabAPI = getGitlabAPI(remote);
         try {
-            List<GitlabProject> memberProjects = gitlabAPI.getProjects();
-            for (GitlabProject memberProject : memberProjects) {
-                if (urlMatch(remote, memberProject.getSshUrl()) || urlMatch(remote, memberProject.getHttpUrl())) {
-                    return memberProject;
-                }
-            }
+            return gitlabAPI.getProjects();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Error error) {
@@ -112,7 +118,7 @@ public class GitLabUtil {
     }
 
     @Nullable
-    private String getRemoteHost(String remote) {
+    public String getRemoteHost(String remote) {
         Pattern compile = Pattern.compile("(?<=(http(s)?://))[\\w|\\.]*");
         Matcher matcher = compile.matcher(remote);
         String remoteHost = remote;
@@ -134,18 +140,30 @@ public class GitLabUtil {
 
     public List getAllRequest() {
         ArrayList<GitlabMergeRequest> gitlabMergeRequests = new ArrayList<>();
+        ArrayList<GitlabMergeRequestWrap> gitlabMergeRequestWraps = new ArrayList<>();
+        GitlabProjectManager gitlabProjectManager = GitlabProjectManager.getInstance(project);
         try {
             GitRepositoryManager manager = GitUtil.getRepositoryManager(project);
             List<GitRepository> repositories = manager.getRepositories();
             for (GitRepository repository : repositories) {
                 Collection<GitRemote> remotes = repository.getRemotes();
                 for (GitRemote remote : remotes) {
+                    GitlabProject gitlabProject = gitlabProjectManager.getGitlabProject(remote);
+                    String remoteHost = getRemoteHost(remote.getFirstUrl());
                     String token = getToken(remote.getFirstUrl());
                     if (token != null && !token.isEmpty()) {
-                        GitlabProject labProject = getLabProject(remote.getFirstUrl());
-                        List<GitlabMergeRequest> mergeRequests = getGitlabAPI(remote.getFirstUrl()).getMergeRequests(labProject);
+                        GitlabAPI gitlabAPI = getGitlabAPI(remoteHost);
+                        List<GitlabMergeRequest> mergeRequests = gitlabAPI.getMergeRequests(gitlabProject);
                         for (GitlabMergeRequest mergeRequest : mergeRequests) {
-                            mergeRequest.setWebUrl(labProject.getWebUrl());
+                            GitlabMergeRequestWrap gitlabMergeRequestWrap = new GitlabMergeRequestWrap(mergeRequest);
+                            gitlabMergeRequestWrap.srcLabProject = gitlabProject;
+                            if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId()) {
+                                gitlabMergeRequestWrap.targetLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getTargetProjectId());
+                            } else {
+                                gitlabMergeRequestWrap.targetLabProject = gitlabProject;
+                            }
+                            mergeRequest.setWebUrl(gitlabProject.getWebUrl());
+                            gitlabMergeRequestWraps.add(gitlabMergeRequestWrap);
                         }
                         gitlabMergeRequests.addAll(mergeRequests);
                     }
