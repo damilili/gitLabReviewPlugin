@@ -1,10 +1,10 @@
 package cn.kuwo.intellij.plugin.ui;
 
-import cn.kuwo.intellij.plugin.GitLabUtil;
 import cn.kuwo.intellij.plugin.RMListObservable;
 import cn.kuwo.intellij.plugin.actions.*;
 import cn.kuwo.intellij.plugin.bean.Branch;
 import cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell.BaseMergeRequestCell;
+import cn.kuwo.intellij.plugin.ui.MergeRequestDetail.MergeRequestDetail;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -14,6 +14,7 @@ import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.openapi.vcs.ProjectLevelVcsManager;
 import com.intellij.openapi.vcs.changes.ui.ChangesViewContentProvider;
 import com.intellij.openapi.vcs.ui.SearchFieldAction;
+import com.intellij.ui.JBSplitter;
 import com.intellij.util.NotNullFunction;
 import git4idea.GitVcs;
 import org.gitlab.api.models.GitlabBranch;
@@ -47,6 +48,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
             }
         }
     };
+    private JBSplitter horizontalSplitter;
 
     public MergeRequestContent(Project project) {
         this.project = project;
@@ -54,32 +56,36 @@ public class MergeRequestContent implements ChangesViewContentProvider {
 
     @Override
     public JComponent initContent() {
+        horizontalSplitter = new JBSplitter(false, 0.7f);
         SimpleToolWindowPanel basePan = new SimpleToolWindowPanel(true, true);
         ActionToolbar actionToolbar = getToolBar(project);
         actionToolbar.setTargetComponent(requestList);
         basePan.setToolbar(actionToolbar.getComponent());
         basePan.setContent(panel1);
+        horizontalSplitter.setFirstComponent(basePan);
         dataModel = new DataModel();
         requestList.setModel(dataModel);
         requestList.setCellRenderer(new MRCommentCellRender());
         requestList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
-                GitlabMergeRequest gitlabMergeRequest = dataModel.getElementAt(requestList.getSelectedIndex());
-                Branch srcBranch = new Branch();
-                srcBranch.repoName = "origin";
-                srcBranch.gitlabBranch = new GitlabBranch();
-                String labProById = GitLabUtil.getInstance(project).getLabProById(gitlabMergeRequest.getSourceProjectId());
-                srcBranch.gitlabBranch.setName(gitlabMergeRequest.getSourceBranch());
-                Branch targetBranch = new Branch();
-                targetBranch.repoName = "origin";
-                targetBranch.gitlabBranch = new GitlabBranch();
-                targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
-                GitLabUtil.getInstance(project).showDifBetweenBranchs(null, srcBranch, targetBranch);
+                if (e.getValueIsAdjusting()) {
+                    GitlabMergeRequest gitlabMergeRequest = dataModel.getElementAt(requestList.getSelectedIndex());
+                    Branch srcBranch = new Branch();
+                    srcBranch.repoName = "origin";
+                    srcBranch.gitlabBranch = new GitlabBranch();
+                    srcBranch.gitlabBranch.setName(gitlabMergeRequest.getSourceBranch());
+                    Branch targetBranch = new Branch();
+                    targetBranch.repoName = "origin";
+                    targetBranch.gitlabBranch = new GitlabBranch();
+                    targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
+                    MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project,gitlabMergeRequest);
+                    horizontalSplitter.setSecondComponent(mergeRequestDetail.getBasePan());
+                }
             }
         });
         RMListObservable.getInstance().addObserver(requestListObserver);
-        return basePan;
+        return horizontalSplitter;
     }
 
     @Override
@@ -89,10 +95,10 @@ public class MergeRequestContent implements ChangesViewContentProvider {
 
     private ActionToolbar getToolBar(Project project) {
         DefaultActionGroup toolBarActionGroup = (DefaultActionGroup) ActionManager.getInstance().getAction("GitMergeRequest.Toolbar");
-        SearchFieldAction searchFieldAction = new SearchFieldAction("Filter: ") {
+        SearchFieldAction searchFieldAction = new SearchFieldAction("") {
             @Override
             public void actionPerformed(AnActionEvent event) {
-                String newValue = getText().trim();
+                RMListObservable.getInstance().filterSearchKey(getText().trim());
             }
         };
         toolBarActionGroup.add(searchFieldAction);
@@ -151,6 +157,11 @@ public class MergeRequestContent implements ChangesViewContentProvider {
             GitlabMergeRequest mergeRequest = value instanceof GitlabMergeRequest ? ((GitlabMergeRequest) value) : null;
             if (mergeRequest != null) {
                 BaseMergeRequestCell mergeRequestCell = BaseMergeRequestCell.getMergeRequestCell(mergeRequest);
+                if (requestList.getSelectedIndex() == index) {
+                    mergeRequestCell.setBackGround(0xff4B6EAF);
+                } else {
+                    mergeRequestCell.setBackGround(0xff3C3F41);
+                }
                 return mergeRequestCell.getBasePan();
             }
             return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);

@@ -18,6 +18,8 @@ import git4idea.repo.GitRepositoryManager;
 import org.gitlab.api.models.GitlabProjectMember;
 
 import javax.swing.*;
+import java.util.Observable;
+import java.util.Observer;
 
 public final class OwnerPopupAction extends BasePopupAction {
     private final Project project;
@@ -25,6 +27,17 @@ public final class OwnerPopupAction extends BasePopupAction {
     public OwnerPopupAction(Project project, String filterName) {
         super(filterName);
         this.project = project;
+        RMListObservable.getInstance().addObserver(new Observer() {
+            @Override
+            public void update(Observable o, Object arg) {
+                String reviewer = FilterBean.getInstance().getOwner();
+                if (reviewer != null && reviewer != "") {
+                    updateFilterValueLabel(reviewer);
+                } else {
+                    updateFilterValueLabel("All");
+                }
+            }
+        });
         updateFilterValueLabel("All");
     }
 
@@ -41,6 +54,7 @@ public final class OwnerPopupAction extends BasePopupAction {
             actionConsumer.consume(new DumbAwareAction(user.getName()) {
                 @Override
                 public void actionPerformed(AnActionEvent e) {
+                    RMListObservable.getInstance().filterReviewer(user.getName());
                 }
             });
         }

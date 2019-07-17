@@ -45,6 +45,5 @@ public final class StatusPopupAction extends BasePopupAction {
                 }
             });
         }
-
     }
 }

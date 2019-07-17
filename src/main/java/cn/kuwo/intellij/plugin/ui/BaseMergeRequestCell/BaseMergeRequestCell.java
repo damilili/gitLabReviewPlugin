@@ -4,8 +4,8 @@ import com.intellij.icons.AllIcons;
 import org.gitlab.api.models.GitlabMergeRequest;
 
 import javax.swing.*;
+import java.awt.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class BaseMergeRequestCell {
     public JLabel getMrTitle() {
@@ -63,7 +63,7 @@ public class BaseMergeRequestCell {
     private JLabel fromBranch;
     private JLabel toBranch;
 
-    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    public static SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
     public static BaseMergeRequestCell getMergeRequestCell(GitlabMergeRequest mergeRequest) {
         BaseMergeRequestCell baseMergeRequestCell = new BaseMergeRequestCell();
@@ -79,4 +79,7 @@ public class BaseMergeRequestCell {
         return baseMergeRequestCell;
     }
 
+    public void setBackGround(int color) {
+        basePan.setBackground(Color.decode(color + ""));
+    }
 }

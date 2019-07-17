@@ -137,12 +137,15 @@ public class GitLabUtil {
                     String token = getToken(remote.getFirstUrl());
                     if (token != null && !token.isEmpty()) {
                         GitlabProject labProject = getLabProject(remote.getFirstUrl());
-                        gitlabMergeRequests.addAll(getGitlabAPI(remote.getFirstUrl()).getMergeRequests(labProject));
+                        List<GitlabMergeRequest> mergeRequests = getGitlabAPI(remote.getFirstUrl()).getMergeRequests(labProject);
+                        for (GitlabMergeRequest mergeRequest : mergeRequests) {
+                            mergeRequest.setWebUrl(labProject.getWebUrl());
+                        }
+                        gitlabMergeRequests.addAll(mergeRequests);
                     }
                 }
             }
-            System.out.println("size==" + gitlabMergeRequests.size());
-            RMListObservable.getInstance().refreshList(gitlabMergeRequests);
+            RMListObservable.getInstance().resetList(gitlabMergeRequests);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -301,7 +304,7 @@ public class GitLabUtil {
         String newRevision = targetBranch.repoName + "/" + targetBranch.gitlabBranch.getName();
         List<GitCommit> diffCommits = null;
         try {
-            diffCommits = GitHistoryUtils.history(project, gitRepository.getRoot(),  newRevision+ ".." + oldRevision);
+            diffCommits = GitHistoryUtils.history(project, gitRepository.getRoot(), newRevision + ".." + oldRevision);
         } catch (VcsException e) {
             e.printStackTrace();
         }
@@ -318,6 +321,17 @@ public class GitLabUtil {
             }
         }
         return null;
+    }
+
+    public String getMergeReqestDetailUrl(GitlabMergeRequest mergeRequest) {
+        try {
+            getGitlabAPI(mergeRequest.getWebUrl()).getMergeRequest(getLabProject(mergeRequest.getWebUrl()),mergeRequest.getId());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        String remoteHost = getRemoteHost(mergeRequest.getWebUrl());
+        return "http://"+remoteHost+GitlabProject.URL + "/" + getLabProject(mergeRequest.getWebUrl()).getId() + "/merge_request/" + mergeRequest.getId();
     }
 
     class ErrMessage {

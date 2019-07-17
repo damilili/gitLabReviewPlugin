@@ -28,7 +28,7 @@ public final class FromBranchPopupAction extends BasePopupAction {
         RMListObservable.getInstance().addObserver(new Observer() {
             @Override
             public void update(Observable o, Object arg) {
-                String branch = FilterBean.getInstance().getToBranch();
+                String branch = FilterBean.getInstance().getFromBranch();
                 if (branch != null && branch != "") {
                     updateFilterValueLabel(branch);
                 } else {
