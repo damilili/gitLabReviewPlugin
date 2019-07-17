@@ -133,8 +133,8 @@ public class CreateMergeRequestDialog extends DialogWrapper {
             if (succ) {
                 StatusBar.Info.set("Create Merge Request Success", project);
             }
-        }else {
-            Messages.showMessageDialog("The source branch has been merged to target branch.", "Create Merge Request Fail", AllIcons.Ide.Error);
+        } else {
+            Messages.showMessageDialog("Nothing to merge from " + branchSource + "into " + branchTarget + ".", "Create Merge Request Fail", AllIcons.Ide.Error);
         }
         super.doOKAction();
     }

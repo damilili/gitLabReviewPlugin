@@ -25,10 +25,7 @@ import org.gitlab.api.AuthMethod;
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.GitlabAPIException;
 import org.gitlab.api.TokenType;
-import org.gitlab.api.models.GitlabBranch;
-import org.gitlab.api.models.GitlabMergeRequest;
-import org.gitlab.api.models.GitlabProject;
-import org.gitlab.api.models.GitlabProjectMember;
+import org.gitlab.api.models.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
