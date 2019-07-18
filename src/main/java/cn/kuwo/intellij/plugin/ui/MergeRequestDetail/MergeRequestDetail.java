@@ -208,14 +208,15 @@ public class MergeRequestDetail {
     private JLabel assignee;
     private JLabel description;
 
-    public JLabel setWebUrl() {
-        webUrl.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                CommonUtil.openWebPage(mergeRequest.getWebUrl() + "/merge_requests/" + mergeRequest.getIid());
-            }
-        });
-        return webUrl;
+    public void setWebUrl() {
+        if (webUrl.getMouseListeners() == null || webUrl.getMouseListeners().length == 0) {
+            webUrl.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    CommonUtil.openWebPage(mergeRequest.getWebUrl() + "/merge_requests/" + mergeRequest.getIid());
+                }
+            });
+        }
     }
 
     private JLabel webUrl;

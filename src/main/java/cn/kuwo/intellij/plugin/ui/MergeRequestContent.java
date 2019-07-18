@@ -105,12 +105,6 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                 }
             }
         });
-        requestList.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-
-            }
-        });
         RMListObservable.getInstance().addObserver(requestListObserver);
         return horizontalSplitter;
     }

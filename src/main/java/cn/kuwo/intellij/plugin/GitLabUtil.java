@@ -139,6 +139,8 @@ public class GitLabUtil {
     }
 
     public void getAllRequest() {
+        //顺便更新下用户列表
+        HashMap<String, GitlabUser> memberMap = MemberManager.getInstance().getMemberList();
         ArrayList<GitlabMergeRequestWrap> gitlabMergeRequestWraps = new ArrayList<>();
         GitlabProjectManager gitlabProjectManager = GitlabProjectManager.getInstance(project);
         try {
@@ -158,6 +160,8 @@ public class GitLabUtil {
                                 continue;
                             }
                             GitlabMergeRequestWrap gitlabMergeRequestWrap = new GitlabMergeRequestWrap(mergeRequest);
+                            memberMap.put(mergeRequest.getAssignee().getName(),mergeRequest.getAssignee());
+                            memberMap.put(mergeRequest.getAuthor().getName(),mergeRequest.getAuthor());
                             gitlabMergeRequestWrap.srcLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getSourceProjectId());
                             String remoteLocalName = null;
                             if (gitlabMergeRequestWrap.srcLabProject != null) {

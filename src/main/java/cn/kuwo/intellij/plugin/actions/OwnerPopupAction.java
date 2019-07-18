@@ -15,7 +15,7 @@ import git4idea.GitUserRegistry;
 import git4idea.GitUtil;
 import git4idea.repo.GitRepository;
 import git4idea.repo.GitRepositoryManager;
-import org.gitlab.api.models.GitlabProjectMember;
+import org.gitlab.api.models.GitlabUser;
 
 import javax.swing.*;
 import java.util.Observable;
@@ -49,8 +49,8 @@ public final class OwnerPopupAction extends BasePopupAction {
                 RMListObservable.getInstance().filterOwner("");
             }
         });
-        addMeItem(actionConsumer, project);
-        for (GitlabProjectMember user : MemberManager.getInstance().getMemberList()) {
+//        addMeItem(actionConsumer, project);
+        for (GitlabUser user : MemberManager.getInstance().getMemberList().values()) {
             actionConsumer.consume(new DumbAwareAction(user.getName()) {
                 @Override
                 public void actionPerformed(AnActionEvent e) {
