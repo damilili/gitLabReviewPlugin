@@ -7,6 +7,7 @@
     </constraints>
     <properties>
       <enabled value="true"/>
+      <foreground color="-4473925"/>
     </properties>
     <border type="none"/>
     <children>
@@ -24,18 +25,9 @@
           <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
         </constraints>
       </vspacer>
-      <component id="ea7cf" class="javax.swing.JLabel" binding="mrAuthor">
-        <constraints>
-          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <horizontalAlignment value="4"/>
-          <text value="author"/>
-        </properties>
-      </component>
       <hspacer id="d1df8">
         <constraints>
-          <grid row="0" column="6" row-span="1" col-span="2" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <grid row="0" column="1" row-span="1" col-span="2" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
         </constraints>
       </hspacer>
       <component id="55594" class="javax.swing.JLabel" binding="updateTime">
@@ -47,16 +39,6 @@
           <text value="2018-11-11 09:55:44"/>
         </properties>
       </component>
-      <component id="76b19" class="javax.swing.JLabel" binding="mrState">
-        <constraints>
-          <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <enabled value="false"/>
-          <font style="1"/>
-          <text value="state"/>
-        </properties>
-      </component>
       <vspacer id="5bd4a">
         <constraints>
           <grid row="1" column="8" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
@@ -64,10 +46,38 @@
       </vspacer>
       <component id="80d12" class="javax.swing.JLabel" binding="reviewer">
         <constraints>
-          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="0" column="7" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
           <text value="reviewer"/>
+        </properties>
+      </component>
+      <component id="ea7cf" class="javax.swing.JLabel" binding="mrAuthor">
+        <constraints>
+          <grid row="0" column="6" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <horizontalAlignment value="4"/>
+          <text value="author"/>
+        </properties>
+      </component>
+      <component id="76b19" class="javax.swing.JLabel" binding="mrState">
+        <constraints>
+          <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <enabled value="true"/>
+          <font style="1"/>
+          <foreground color="-1574145"/>
+          <text value="state"/>
+        </properties>
+      </component>
+      <component id="3bb95" class="javax.swing.JLabel" binding="toBranch">
+        <constraints>
+          <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <text value="toBranch"/>
         </properties>
       </component>
       <component id="7f526" class="javax.swing.JLabel" binding="fromBranch">
@@ -77,14 +87,6 @@
         <properties>
           <horizontalAlignment value="4"/>
           <text value="fromBranch"/>
-        </properties>
-      </component>
-      <component id="3bb95" class="javax.swing.JLabel" binding="toBranch">
-        <constraints>
-          <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <text value="toBranch"/>
         </properties>
       </component>
     </children>

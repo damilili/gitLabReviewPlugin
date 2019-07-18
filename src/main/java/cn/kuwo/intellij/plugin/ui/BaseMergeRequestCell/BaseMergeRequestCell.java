@@ -75,20 +75,24 @@ public class BaseMergeRequestCell {
         baseMergeRequestCell.getMrState().setText(mergeRequest.getState());
         baseMergeRequestCell.getReviewer().setIcon(AllIcons.Vcs.Arrow_right);
         baseMergeRequestCell.getReviewer().setText(mergeRequest.getAssignee().getName());
-        String srcPathWithNamespace = "";
-        String targetPathWithNamespace = "";
-        if (mergeRequestWrap.srcLabProject != null) {
-            srcPathWithNamespace = mergeRequestWrap.srcLabProject.getPathWithNamespace() + ":";
-        }else {
-            srcPathWithNamespace="??????:";
+        String srcLocalName = "";
+        String targetLocalName = "";
+        if (mergeRequestWrap.srcLocalProName != null && !mergeRequestWrap.srcLocalProName.isEmpty()) {
+            srcLocalName = mergeRequestWrap.srcLocalProName + "/";
+        } else if (mergeRequestWrap.srcLabProject != null) {
+            srcLocalName = mergeRequestWrap.srcLabProject.getPathWithNamespace() + ":";
+        } else {
+            srcLocalName = "??????:";
         }
-        if (mergeRequestWrap.targetLabProject != null) {
-            targetPathWithNamespace = mergeRequestWrap.targetLabProject.getPathWithNamespace() + ":";
-        }else {
-            targetPathWithNamespace="??????:";
+        if (mergeRequestWrap.targetLocalProName != null && !mergeRequestWrap.targetLocalProName.isEmpty()) {
+            targetLocalName = mergeRequestWrap.targetLocalProName + "/";
+        } else if (mergeRequestWrap.targetLabProject != null) {
+            targetLocalName = mergeRequestWrap.targetLabProject.getPathWithNamespace() + ":";
+        } else {
+            targetLocalName = "??????:";
         }
-        baseMergeRequestCell.getFromBranch().setText("| " + srcPathWithNamespace + mergeRequest.getSourceBranch());
-        baseMergeRequestCell.getToBranch().setText(targetPathWithNamespace + mergeRequest.getTargetBranch());
+        baseMergeRequestCell.getFromBranch().setText(srcLocalName + mergeRequest.getSourceBranch());
+        baseMergeRequestCell.getToBranch().setText(targetLocalName + mergeRequest.getTargetBranch());
         baseMergeRequestCell.getToBranch().setIcon(AllIcons.Vcs.Arrow_right);
         return baseMergeRequestCell;
     }

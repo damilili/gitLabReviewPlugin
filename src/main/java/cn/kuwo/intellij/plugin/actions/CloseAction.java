@@ -22,4 +22,12 @@ public final class CloseAction extends RequestDetailAction {
             RMListObservable.getInstance().refreshList();
         }
     }
+    @Override
+    public void update(AnActionEvent e) {
+        if (mergeRequest.getState().equals("closed") || mergeRequest.getState().equals("merged")) {
+            e.getPresentation().setEnabled(false);
+        } else {
+            e.getPresentation().setEnabled(true);
+        }
+    }
 }

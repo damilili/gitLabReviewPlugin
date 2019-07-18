@@ -6,7 +6,7 @@ import org.gitlab.api.models.GitlabMergeRequest;
 import javax.swing.*;
 
 public abstract class RequestDetailAction extends AnAction {
-     protected GitlabMergeRequest mergeRequest;
+    protected GitlabMergeRequest mergeRequest;
 
     public void setRequest(GitlabMergeRequest mergeRequest) {
         this.mergeRequest = mergeRequest;

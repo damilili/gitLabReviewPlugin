@@ -26,9 +26,12 @@ public class MergeRequestDetail {
     private GitlabMergeRequest mergeRequest;
     private SimpleToolWindowPanel basePan;
     private static ActionToolbar actionToolbar;
+    private static MergeRequestDetail mergeRequestCell;
 
     public static MergeRequestDetail getMergeRequestDetail(Project project, GitlabMergeRequest mergeRequest) {
-        MergeRequestDetail mergeRequestCell = new MergeRequestDetail(project);
+        if (mergeRequestCell == null) {
+            mergeRequestCell = new MergeRequestDetail(project);
+        }
         if (mergeRequest != null) {
             mergeRequestCell.inflateView(mergeRequest);
         } else {
@@ -77,6 +80,11 @@ public class MergeRequestDetail {
             basePan.setToolbar(actionToolbar.getComponent());
             basePan.setContent(panel1);
         }
+        for (AnAction anAction : actionToolbar.getActions()) {
+            if (anAction instanceof RequestDetailAction) {
+                ((RequestDetailAction) anAction).setRequest(mergeRequest);
+            }
+        }
         return basePan;
     }
 
@@ -97,11 +105,7 @@ public class MergeRequestDetail {
             toolBarActionGroup.add(acceptAction);
             actionToolbar = ActionManager.getInstance().createActionToolbar("GitMergeRequest.Detail", toolBarActionGroup, true);
         }
-        for (AnAction anAction : actionToolbar.getActions()) {
-            if (anAction instanceof RequestDetailAction) {
-                ((RequestDetailAction) anAction).setRequest(mergeRequest);
-            }
-        }
+
         return actionToolbar;
     }
 

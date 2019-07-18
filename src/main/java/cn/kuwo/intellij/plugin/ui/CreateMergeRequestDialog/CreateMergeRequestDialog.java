@@ -46,7 +46,6 @@ public class CreateMergeRequestDialog extends DialogWrapper {
     private JComboBox repositoryBox;
     private JLabel labelRepository;
     private JComboBox remoteBox;
-    private JTextArea desTextArea;
     private GitLabUtil gitlabUtil;
 
     private GitRepository curRepository;

@@ -49,6 +49,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                 } else {
                     dataModel.arrayList = null;
                 }
+                requestList.setSelectedIndex(-1);
                 requestList.updateUI();
             }
         }
@@ -78,11 +79,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                 GitlabMergeRequest gitlabMergeRequest = gitlabMergeRequestWrap.gitlabMergeRequest;
                 Branch srcBranch = new Branch();
                 if (gitlabMergeRequestWrap.srcLabProject != null) {
-                    String srcRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getHttpUrl());
-                    if (srcRemoteName == null || srcRemoteName.isEmpty()) {
-                        srcRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getSshUrl());
-                        srcBranch.repoName = srcRemoteName;
-                    }
+                    srcBranch.repoName = gitlabMergeRequestWrap.srcLocalProName;
                     srcBranch.gitlabBranch = new GitlabBranch();
                     srcBranch.gitlabBranch.setName(gitlabMergeRequest.getSourceBranch());
                 } else {
@@ -93,11 +90,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                 }
                 Branch targetBranch = new Branch();
                 if (gitlabMergeRequestWrap.targetLabProject != null) {
-                    String targetRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getHttpUrl());
-                    if (targetRemoteName == null || targetRemoteName.isEmpty()) {
-                        targetRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getSshUrl());
-                        targetBranch.repoName = targetRemoteName;
-                    }
+                    targetBranch.repoName = gitlabMergeRequestWrap.targetLocalProName;
                     targetBranch.gitlabBranch = new GitlabBranch();
                     targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
                 } else {

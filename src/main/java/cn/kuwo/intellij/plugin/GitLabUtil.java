@@ -154,12 +154,32 @@ public class GitLabUtil {
                         GitlabAPI gitlabAPI = getGitlabAPI(remoteHost);
                         List<GitlabMergeRequest> mergeRequests = gitlabAPI.getMergeRequests(gitlabProject);
                         for (GitlabMergeRequest mergeRequest : mergeRequests) {
+                            if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId() && mergeRequest.getProjectId().intValue() != mergeRequest.getTargetProjectId()) {
+                                continue;
+                            }
                             GitlabMergeRequestWrap gitlabMergeRequestWrap = new GitlabMergeRequestWrap(mergeRequest);
                             gitlabMergeRequestWrap.srcLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getSourceProjectId());
+                            String remoteLocalName = null;
+                            if (gitlabMergeRequestWrap.srcLabProject != null) {
+                                remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getHttpUrl());
+                                if (remoteLocalName == null || remoteLocalName.isEmpty()) {
+                                    remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getSshUrl());
+                                }
+                            }
+                            gitlabMergeRequestWrap.srcLocalProName = remoteLocalName;
                             if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId()) {
                                 gitlabMergeRequestWrap.targetLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getTargetProjectId());
+                                remoteLocalName = null;
+                                if (gitlabMergeRequestWrap.targetLabProject != null) {
+                                    remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getHttpUrl());
+                                    if (remoteLocalName == null || remoteLocalName.isEmpty()) {
+                                        remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getSshUrl());
+                                    }
+                                }
+                                gitlabMergeRequestWrap.targetLocalProName = remoteLocalName;
                             } else {
                                 gitlabMergeRequestWrap.targetLabProject = gitlabProject;
+                                gitlabMergeRequestWrap.targetLocalProName = remote.getName();
                             }
                             mergeRequest.setWebUrl(gitlabProject.getWebUrl());
                             gitlabMergeRequestWraps.add(gitlabMergeRequestWrap);
