@@ -1,5 +1,6 @@
 package cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell;
 
+import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
 import com.intellij.icons.AllIcons;
 import org.gitlab.api.models.GitlabMergeRequest;
 
@@ -65,7 +66,8 @@ public class BaseMergeRequestCell {
 
     public static SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
-    public static BaseMergeRequestCell getMergeRequestCell(GitlabMergeRequest mergeRequest) {
+    public static BaseMergeRequestCell getMergeRequestCell(GitlabMergeRequestWrap mergeRequestWrap) {
+        GitlabMergeRequest mergeRequest = mergeRequestWrap.gitlabMergeRequest;
         BaseMergeRequestCell baseMergeRequestCell = new BaseMergeRequestCell();
         baseMergeRequestCell.getMrTitle().setText(mergeRequest.getTitle());
         baseMergeRequestCell.getMrAuthor().setText(mergeRequest.getAuthor().getName());
@@ -73,8 +75,20 @@ public class BaseMergeRequestCell {
         baseMergeRequestCell.getMrState().setText(mergeRequest.getState());
         baseMergeRequestCell.getReviewer().setIcon(AllIcons.Vcs.Arrow_right);
         baseMergeRequestCell.getReviewer().setText(mergeRequest.getAssignee().getName());
-        baseMergeRequestCell.getFromBranch().setText("| " + mergeRequest.getSourceBranch());
-        baseMergeRequestCell.getToBranch().setText(mergeRequest.getTargetBranch());
+        String srcPathWithNamespace = "";
+        String targetPathWithNamespace = "";
+        if (mergeRequestWrap.srcLabProject != null) {
+            srcPathWithNamespace = mergeRequestWrap.srcLabProject.getPathWithNamespace() + ":";
+        }else {
+            srcPathWithNamespace="??????:";
+        }
+        if (mergeRequestWrap.targetLabProject != null) {
+            targetPathWithNamespace = mergeRequestWrap.targetLabProject.getPathWithNamespace() + ":";
+        }else {
+            targetPathWithNamespace="??????:";
+        }
+        baseMergeRequestCell.getFromBranch().setText("| " + srcPathWithNamespace + mergeRequest.getSourceBranch());
+        baseMergeRequestCell.getToBranch().setText(targetPathWithNamespace + mergeRequest.getTargetBranch());
         baseMergeRequestCell.getToBranch().setIcon(AllIcons.Vcs.Arrow_right);
         return baseMergeRequestCell;
     }

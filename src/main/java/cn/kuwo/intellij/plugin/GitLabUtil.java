@@ -92,7 +92,7 @@ public class GitLabUtil {
 
     public GitlabProject getLabProject(String remote) {
         for (GitlabProject gitlabProject : getLabProjects(remote)) {
-            if (urlMatch(remote, gitlabProject.getSshUrl()) || urlMatch(remote, gitlabProject.getHttpUrl())) {
+            if (CommonUtil.urlMatch(remote, gitlabProject.getSshUrl()) || CommonUtil.urlMatch(remote, gitlabProject.getHttpUrl())) {
                 return gitlabProject;
             }
         }
@@ -138,8 +138,7 @@ public class GitLabUtil {
         return null;
     }
 
-    public List getAllRequest() {
-        ArrayList<GitlabMergeRequest> gitlabMergeRequests = new ArrayList<>();
+    public void getAllRequest() {
         ArrayList<GitlabMergeRequestWrap> gitlabMergeRequestWraps = new ArrayList<>();
         GitlabProjectManager gitlabProjectManager = GitlabProjectManager.getInstance(project);
         try {
@@ -156,7 +155,7 @@ public class GitLabUtil {
                         List<GitlabMergeRequest> mergeRequests = gitlabAPI.getMergeRequests(gitlabProject);
                         for (GitlabMergeRequest mergeRequest : mergeRequests) {
                             GitlabMergeRequestWrap gitlabMergeRequestWrap = new GitlabMergeRequestWrap(mergeRequest);
-                            gitlabMergeRequestWrap.srcLabProject = gitlabProject;
+                            gitlabMergeRequestWrap.srcLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getSourceProjectId());
                             if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId()) {
                                 gitlabMergeRequestWrap.targetLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getTargetProjectId());
                             } else {
@@ -165,15 +164,13 @@ public class GitLabUtil {
                             mergeRequest.setWebUrl(gitlabProject.getWebUrl());
                             gitlabMergeRequestWraps.add(gitlabMergeRequestWrap);
                         }
-                        gitlabMergeRequests.addAll(mergeRequests);
                     }
                 }
             }
-            RMListObservable.getInstance().resetList(gitlabMergeRequests);
+            RMListObservable.getInstance().resetList(gitlabMergeRequestWraps);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return gitlabMergeRequests;
     }
 
     private String getToken(String remoteUrl) {
@@ -213,13 +210,6 @@ public class GitLabUtil {
         return null;
     }
 
-    private boolean urlMatch(String remoteUrl, String apiUrl) {
-        String formattedRemoteUrl = remoteUrl.trim();
-        String formattedApiUrl = apiUrl.trim();
-        formattedRemoteUrl = formattedRemoteUrl.replace("https://", "");
-        formattedRemoteUrl = formattedRemoteUrl.replace("http://", "");
-        return StringUtils.isNotBlank(formattedApiUrl) && StringUtils.isNotBlank(formattedRemoteUrl) && formattedApiUrl.toLowerCase().contains(formattedRemoteUrl.toLowerCase());
-    }
 
     public ArrayList<Branch> getRemoteBranches() {
         ArrayList<Branch> result = new ArrayList<>();

@@ -2,7 +2,7 @@ package cn.kuwo.intellij.plugin;
 
 import cn.kuwo.intellij.plugin.actions.StatusPopupAction;
 import cn.kuwo.intellij.plugin.bean.FilterBean;
-import org.gitlab.api.models.GitlabMergeRequest;
+import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +10,7 @@ import java.util.Observable;
 
 public class RMListObservable extends Observable {
     private static RMListObservable instance;
-    private ArrayList<GitlabMergeRequest> gitlabMergeRequests;
+    private ArrayList<GitlabMergeRequestWrap> gitlabMergeRequests;
 
     private RMListObservable() {
 
@@ -24,33 +24,33 @@ public class RMListObservable extends Observable {
     }
 
     public void refreshList() {
-        List<GitlabMergeRequest> result = new ArrayList<>();
+        List<GitlabMergeRequestWrap> result = new ArrayList<>();
         if (gitlabMergeRequests != null) {
-            for (GitlabMergeRequest gitlabMergeRequest : gitlabMergeRequests) {
+            for (GitlabMergeRequestWrap gitlabMergeRequest : gitlabMergeRequests) {
                 String reviewer = FilterBean.getInstance().getReviewer();
-                if (reviewer != null && !reviewer.trim().isEmpty() && !gitlabMergeRequest.getAssignee().getName().contains(reviewer)) {
+                if (reviewer != null && !reviewer.trim().isEmpty() && !gitlabMergeRequest.gitlabMergeRequest.getAssignee().getName().contains(reviewer)) {
                     continue;
                 }
                 String owner = FilterBean.getInstance().getOwner();
-                if (owner != null && !owner.trim().isEmpty() && !gitlabMergeRequest.getAuthor().getName().contains(owner)) {
+                if (owner != null && !owner.trim().isEmpty() && !gitlabMergeRequest.gitlabMergeRequest.getAuthor().getName().contains(owner)) {
                     continue;
                 }
                 String fromBranch = FilterBean.getInstance().getFromBranch();
-                if (fromBranch != null && !fromBranch.trim().isEmpty() && !gitlabMergeRequest.getSourceBranch().contains(fromBranch)) {
+                if (fromBranch != null && !fromBranch.trim().isEmpty() && !gitlabMergeRequest.gitlabMergeRequest.getSourceBranch().contains(fromBranch)) {
                     continue;
                 }
                 String toBranch = FilterBean.getInstance().getToBranch();
-                if (toBranch != null && !toBranch.trim().isEmpty() && !gitlabMergeRequest.getTargetBranch().contains(toBranch)) {
+                if (toBranch != null && !toBranch.trim().isEmpty() && !gitlabMergeRequest.gitlabMergeRequest.getTargetBranch().contains(toBranch)) {
                     continue;
                 }
                 String status = FilterBean.getInstance().getStatus();
-                if (status != null && !status.trim().isEmpty() && !gitlabMergeRequest.getState().contains(status)) {
+                if (status != null && !status.trim().isEmpty() && !gitlabMergeRequest.gitlabMergeRequest.getState().contains(status)) {
                     continue;
                 }
                 String searchKey = FilterBean.getInstance().getSearchKey();
                 if (searchKey != null) {
-                    boolean titleContain = gitlabMergeRequest.getTitle() != null && gitlabMergeRequest.getTitle().toLowerCase().contains(searchKey.trim().toLowerCase());
-                    boolean discriptionContain = gitlabMergeRequest.getDescription() != null && gitlabMergeRequest.getDescription().toLowerCase().contains(searchKey.trim().toLowerCase());
+                    boolean titleContain = gitlabMergeRequest.gitlabMergeRequest.getTitle() != null && gitlabMergeRequest.gitlabMergeRequest.getTitle().toLowerCase().contains(searchKey.trim().toLowerCase());
+                    boolean discriptionContain = gitlabMergeRequest.gitlabMergeRequest.getDescription() != null && gitlabMergeRequest.gitlabMergeRequest.getDescription().toLowerCase().contains(searchKey.trim().toLowerCase());
                     if (!searchKey.trim().isEmpty() && !titleContain && !discriptionContain) {
                         continue;
                     }
@@ -92,7 +92,7 @@ public class RMListObservable extends Observable {
         refreshList();
     }
 
-    public void resetList(ArrayList<GitlabMergeRequest> gitlabMergeRequests) {
+    public void resetList(ArrayList<GitlabMergeRequestWrap> gitlabMergeRequests) {
         this.gitlabMergeRequests = gitlabMergeRequests;
         refreshList();
     }

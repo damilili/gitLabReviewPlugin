@@ -1,15 +1,20 @@
 package cn.kuwo.intellij.plugin.ui;
 
+import cn.kuwo.intellij.plugin.CommonUtil;
+import cn.kuwo.intellij.plugin.LocalRepositoryManager;
 import cn.kuwo.intellij.plugin.RMListObservable;
 import cn.kuwo.intellij.plugin.actions.*;
 import cn.kuwo.intellij.plugin.bean.Branch;
+import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
 import cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell.BaseMergeRequestCell;
 import cn.kuwo.intellij.plugin.ui.MergeRequestDetail.MergeRequestDetail;
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.openapi.vcs.ProjectLevelVcsManager;
 import com.intellij.openapi.vcs.changes.ui.ChangesViewContentProvider;
@@ -22,9 +27,9 @@ import org.gitlab.api.models.GitlabMergeRequest;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -40,7 +45,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         public void update(Observable o, Object arg) {
             if (requestList != null) {
                 if (arg != null && arg instanceof List) {
-                    dataModel.arrayList = (List<GitlabMergeRequest>) arg;
+                    dataModel.arrayList = (List<GitlabMergeRequestWrap>) arg;
                 } else {
                     dataModel.arrayList = null;
                 }
@@ -66,22 +71,41 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         dataModel = new DataModel();
         requestList.setModel(dataModel);
         requestList.setCellRenderer(new MRCommentCellRender());
-        requestList.addListSelectionListener(new ListSelectionListener() {
+        requestList.addMouseListener(new MouseAdapter() {
             @Override
-            public void valueChanged(ListSelectionEvent e) {
-                if (e.getValueIsAdjusting()) {
-                    GitlabMergeRequest gitlabMergeRequest = dataModel.getElementAt(requestList.getSelectedIndex());
-                    Branch srcBranch = new Branch();
-                    srcBranch.repoName = "origin";
+            public void mouseClicked(MouseEvent e) {
+                GitlabMergeRequestWrap gitlabMergeRequestWrap = dataModel.getElementAt(requestList.getSelectedIndex());
+                GitlabMergeRequest gitlabMergeRequest = gitlabMergeRequestWrap.gitlabMergeRequest;
+                Branch srcBranch = new Branch();
+                if (gitlabMergeRequestWrap.srcLabProject != null) {
+                    String srcRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getHttpUrl());
+                    if (srcRemoteName == null || srcRemoteName.isEmpty()) {
+                        srcRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getSshUrl());
+                        srcBranch.repoName = srcRemoteName;
+                    }
                     srcBranch.gitlabBranch = new GitlabBranch();
                     srcBranch.gitlabBranch.setName(gitlabMergeRequest.getSourceBranch());
-                    Branch targetBranch = new Branch();
-                    targetBranch.repoName = "origin";
+                } else {
+                    if (Messages.YES == Messages.showYesNoDialog("The request comes from an unknown branch  and the\nbrowser is about to be opened to view the details.", "Message", "Yes", "No", AllIcons.Ide.Warning_notifications)) {
+                        CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
+                    }
+                    return;
+                }
+                Branch targetBranch = new Branch();
+                if (gitlabMergeRequestWrap.targetLabProject != null) {
+                    String targetRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getHttpUrl());
+                    if (targetRemoteName == null || targetRemoteName.isEmpty()) {
+                        targetRemoteName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getSshUrl());
+                        targetBranch.repoName = targetRemoteName;
+                    }
                     targetBranch.gitlabBranch = new GitlabBranch();
                     targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
-                    MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project,gitlabMergeRequest);
-                    horizontalSplitter.setSecondComponent(mergeRequestDetail.getBasePan());
+                } else {
+                    CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
+                    return;
                 }
+                MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project, gitlabMergeRequest);
+                horizontalSplitter.setSecondComponent(mergeRequestDetail.getBasePan());
             }
         });
         RMListObservable.getInstance().addObserver(requestListObserver);
@@ -135,10 +159,10 @@ public class MergeRequestContent implements ChangesViewContentProvider {
     }
 
     public class DataModel extends AbstractListModel {
-        private List<GitlabMergeRequest> arrayList;
+        private List<GitlabMergeRequestWrap> arrayList;
 
         @Override
-        public GitlabMergeRequest getElementAt(int index) {
+        public GitlabMergeRequestWrap getElementAt(int index) {
             if (arrayList == null) {
                 return null;
             }
@@ -154,7 +178,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
     public class MRCommentCellRender extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-            GitlabMergeRequest mergeRequest = value instanceof GitlabMergeRequest ? ((GitlabMergeRequest) value) : null;
+            GitlabMergeRequestWrap mergeRequest = value instanceof GitlabMergeRequestWrap ? ((GitlabMergeRequestWrap) value) : null;
             if (mergeRequest != null) {
                 BaseMergeRequestCell mergeRequestCell = BaseMergeRequestCell.getMergeRequestCell(mergeRequest);
                 if (requestList.getSelectedIndex() == index) {

@@ -1,5 +1,6 @@
 package cn.kuwo.intellij.plugin.ui.MergeRequestDetail;
 
+import cn.kuwo.intellij.plugin.CommonUtil;
 import cn.kuwo.intellij.plugin.RMListObservable;
 import cn.kuwo.intellij.plugin.actions.*;
 import cn.kuwo.intellij.plugin.bean.FilterBean;
@@ -205,19 +206,9 @@ public class MergeRequestDetail {
 
     public JLabel setWebUrl() {
         webUrl.addMouseListener(new MouseAdapter() {
-            private void openWebPage(String uri) {
-                Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
-                if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
-                    try {
-                        desktop.browse(new URI(uri));
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-
             @Override
             public void mouseClicked(MouseEvent e) {
-                openWebPage(mergeRequest.getWebUrl() + "/merge_requests/" + mergeRequest.getIid());
+                CommonUtil.openWebPage(mergeRequest.getWebUrl() + "/merge_requests/" + mergeRequest.getIid());
             }
         });
         return webUrl;

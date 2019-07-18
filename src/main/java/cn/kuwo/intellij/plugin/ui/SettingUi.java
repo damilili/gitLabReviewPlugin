@@ -1,5 +1,6 @@
 package cn.kuwo.intellij.plugin.ui;
 
+import cn.kuwo.intellij.plugin.CommonUtil;
 import cn.kuwo.intellij.plugin.Constants;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.options.Configurable;
@@ -16,12 +17,10 @@ import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.net.URI;
 import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -67,14 +66,14 @@ public class SettingUi implements Configurable {
         if (repositoryList.getItemCount() > 0) {
             repositoryList.setSelectedIndex(0);
             PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(project);
-            token.setText(propertiesComponent.getValue(Constants.PROPERTIEPRE+((String) repositoryList.getSelectedItem())));
+            token.setText(propertiesComponent.getValue(Constants.PROPERTIEPRE + ((String) repositoryList.getSelectedItem())));
         }
         btToken.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String currentRepo = (String) repositoryList.getSelectedItem();
                 String currentRepoTokenPage = "http://" + currentRepo + "/profile/account";
-                openWebPage(currentRepoTokenPage);
+                CommonUtil.openWebPage(currentRepoTokenPage);
             }
         });
     }
@@ -161,16 +160,6 @@ public class SettingUi implements Configurable {
         @Override
         public Configurable getConfigurable(Project project) {
             return new SettingUi(project);
-        }
-    }
-
-    private void openWebPage(String uri) {
-        Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
-        if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
-            try {
-                desktop.browse(new URI(uri));
-            } catch (Exception ignored) {
-            }
         }
     }
 }

@@ -1,19 +1,17 @@
 package cn.kuwo.intellij.plugin;
 
-import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
 import com.intellij.openapi.project.Project;
 import git4idea.repo.GitRemote;
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.models.GitlabProject;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 public class GitlabProjectManager {
-    private static GitlabProjectManager instance = null;
     private Project project;
     private HashMap<String, GitlabProject> projectHashMap = new HashMap<>();
+    private static GitlabProjectManager instance = null;
 
     private GitlabProjectManager(Project project) {
         this.project = project;
@@ -36,7 +34,7 @@ public class GitlabProjectManager {
 
     public GitlabProject getGitlabProject(String remoteHost, int projectId) {
         GitLabUtil gitLabUtil = GitLabUtil.getInstance(project);
-        remoteHost = gitLabUtil.getRemoteHost(remoteHost + projectId);
+        remoteHost = gitLabUtil.getRemoteHost(remoteHost);
         GitlabProject gitlabProject = projectHashMap.get(remoteHost + projectId);
         if (gitlabProject == null) {
             GitlabAPI gitlabAPI = gitLabUtil.getGitlabAPI(remoteHost);
