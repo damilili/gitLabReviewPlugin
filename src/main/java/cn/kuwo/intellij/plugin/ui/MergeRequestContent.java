@@ -27,6 +27,8 @@ import org.gitlab.api.models.GitlabMergeRequest;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -49,7 +51,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                 } else {
                     dataModel.arrayList = null;
                 }
-                requestList.setSelectedIndex(-1);
+                requestList.clearSelection();
                 requestList.updateUI();
             }
         }
@@ -72,33 +74,41 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         dataModel = new DataModel();
         requestList.setModel(dataModel);
         requestList.setCellRenderer(new MRCommentCellRender());
+        requestList.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                if (!e.getValueIsAdjusting()) {
+                    GitlabMergeRequestWrap gitlabMergeRequestWrap = dataModel.getElementAt(requestList.getSelectedIndex());
+                    GitlabMergeRequest gitlabMergeRequest = gitlabMergeRequestWrap.gitlabMergeRequest;
+                    Branch srcBranch = new Branch();
+                    if (gitlabMergeRequestWrap.srcLabProject != null) {
+                        srcBranch.repoName = gitlabMergeRequestWrap.srcLocalProName;
+                        srcBranch.gitlabBranch = new GitlabBranch();
+                        srcBranch.gitlabBranch.setName(gitlabMergeRequest.getSourceBranch());
+                    } else {
+                        if (Messages.YES == Messages.showYesNoDialog("The request comes from an unknown branch  and the\nbrowser is about to be opened to view the details.", "Message", "Yes", "No", AllIcons.Ide.Warning_notifications)) {
+                            CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
+                        }
+                        return;
+                    }
+                    Branch targetBranch = new Branch();
+                    if (gitlabMergeRequestWrap.targetLabProject != null) {
+                        targetBranch.repoName = gitlabMergeRequestWrap.targetLocalProName;
+                        targetBranch.gitlabBranch = new GitlabBranch();
+                        targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
+                    } else {
+                        CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
+                        return;
+                    }
+                    MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project, gitlabMergeRequest);
+                    horizontalSplitter.setSecondComponent(mergeRequestDetail.getBasePan());
+                }
+            }
+        });
         requestList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                GitlabMergeRequestWrap gitlabMergeRequestWrap = dataModel.getElementAt(requestList.getSelectedIndex());
-                GitlabMergeRequest gitlabMergeRequest = gitlabMergeRequestWrap.gitlabMergeRequest;
-                Branch srcBranch = new Branch();
-                if (gitlabMergeRequestWrap.srcLabProject != null) {
-                    srcBranch.repoName = gitlabMergeRequestWrap.srcLocalProName;
-                    srcBranch.gitlabBranch = new GitlabBranch();
-                    srcBranch.gitlabBranch.setName(gitlabMergeRequest.getSourceBranch());
-                } else {
-                    if (Messages.YES == Messages.showYesNoDialog("The request comes from an unknown branch  and the\nbrowser is about to be opened to view the details.", "Message", "Yes", "No", AllIcons.Ide.Warning_notifications)) {
-                        CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
-                    }
-                    return;
-                }
-                Branch targetBranch = new Branch();
-                if (gitlabMergeRequestWrap.targetLabProject != null) {
-                    targetBranch.repoName = gitlabMergeRequestWrap.targetLocalProName;
-                    targetBranch.gitlabBranch = new GitlabBranch();
-                    targetBranch.gitlabBranch.setName(gitlabMergeRequest.getTargetBranch());
-                } else {
-                    CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
-                    return;
-                }
-                MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project, gitlabMergeRequest);
-                horizontalSplitter.setSecondComponent(mergeRequestDetail.getBasePan());
+
             }
         });
         RMListObservable.getInstance().addObserver(requestListObserver);
