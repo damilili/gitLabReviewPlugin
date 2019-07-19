@@ -54,7 +54,7 @@ public final class OwnerPopupAction extends BasePopupAction {
             actionConsumer.consume(new DumbAwareAction(user.getName()) {
                 @Override
                 public void actionPerformed(AnActionEvent e) {
-                    RMListObservable.getInstance().filterReviewer(user.getName());
+                    RMListObservable.getInstance().filterOwner(user.getName());
                 }
             });
         }

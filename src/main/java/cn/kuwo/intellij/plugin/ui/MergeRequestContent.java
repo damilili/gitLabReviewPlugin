@@ -77,7 +77,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         requestList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
-                if (!e.getValueIsAdjusting()) {
+                if (!e.getValueIsAdjusting() && requestList.getSelectedIndex() >= 0) {
                     GitlabMergeRequestWrap gitlabMergeRequestWrap = dataModel.getElementAt(requestList.getSelectedIndex());
                     GitlabMergeRequest gitlabMergeRequest = gitlabMergeRequestWrap.gitlabMergeRequest;
                     Branch srcBranch = new Branch();
