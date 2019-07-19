@@ -44,6 +44,9 @@ public class MergeRequestDetail {
         this.mergeRequest = mergeRequest;
         String title = "<html>" + mergeRequest.getTitle() + "</html>";
         getName().setText(title);
+        if (mergeRequest.getAssignee() == null) {
+            getAssignee().setFont(Font.getFont("BOLD"));
+        }
         getAssignee().setText(mergeRequest.getAssignee() == null ? "Unspecified" : mergeRequest.getAssignee().getName());
         getAuthor().setText(mergeRequest.getAuthor().getName());
         getCreatedTime().setText(BaseMergeRequestCell.sdf.format(mergeRequest.getCreatedAt()));
