@@ -44,7 +44,7 @@ public class MergeRequestDetail {
         this.mergeRequest = mergeRequest;
         String title = "<html>" + mergeRequest.getTitle() + "</html>";
         getName().setText(title);
-        getAssignee().setText(mergeRequest.getAssignee().getName());
+        getAssignee().setText(mergeRequest.getAssignee() == null ? "Unspecified" : mergeRequest.getAssignee().getName());
         getAuthor().setText(mergeRequest.getAuthor().getName());
         getCreatedTime().setText(BaseMergeRequestCell.sdf.format(mergeRequest.getCreatedAt()));
         getUpdatedTime().setText(BaseMergeRequestCell.sdf.format(mergeRequest.getUpdatedAt()));

@@ -74,7 +74,7 @@ public class BaseMergeRequestCell {
         baseMergeRequestCell.getUpdateTime().setText(sdf.format(mergeRequest.getCreatedAt()));
         baseMergeRequestCell.getMrState().setText(mergeRequest.getState());
         baseMergeRequestCell.getReviewer().setIcon(AllIcons.Vcs.Arrow_right);
-        baseMergeRequestCell.getReviewer().setText(mergeRequest.getAssignee().getName());
+        baseMergeRequestCell.getReviewer().setText(mergeRequest.getAssignee() == null ? " Unspecified " : mergeRequest.getAssignee().getName());
         String srcLocalName = "";
         String targetLocalName = "";
         if (mergeRequestWrap.srcLocalProName != null && !mergeRequestWrap.srcLocalProName.isEmpty()) {

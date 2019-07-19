@@ -28,7 +28,7 @@ public class RMListObservable extends Observable {
         if (gitlabMergeRequests != null) {
             for (GitlabMergeRequestWrap gitlabMergeRequest : gitlabMergeRequests) {
                 String reviewer = FilterBean.getInstance().getReviewer();
-                if (reviewer != null && !reviewer.trim().isEmpty() && !gitlabMergeRequest.gitlabMergeRequest.getAssignee().getName().toLowerCase().contains(reviewer.toLowerCase())) {
+                if (reviewer != null && !reviewer.trim().isEmpty() && (gitlabMergeRequest.gitlabMergeRequest.getAssignee() == null || !gitlabMergeRequest.gitlabMergeRequest.getAssignee().getName().toLowerCase().contains(reviewer.toLowerCase()))) {
                     continue;
                 }
                 String owner = FilterBean.getInstance().getOwner();
@@ -36,11 +36,11 @@ public class RMListObservable extends Observable {
                     continue;
                 }
                 String fromBranch = FilterBean.getInstance().getFromBranch();
-                if (fromBranch != null && !fromBranch.trim().isEmpty() && !(gitlabMergeRequest.srcLocalProName+"/"+gitlabMergeRequest.gitlabMergeRequest.getSourceBranch()).toLowerCase().contains(fromBranch.toLowerCase())) {
+                if (fromBranch != null && !fromBranch.trim().isEmpty() && !(gitlabMergeRequest.srcLocalProName + "/" + gitlabMergeRequest.gitlabMergeRequest.getSourceBranch()).toLowerCase().contains(fromBranch.toLowerCase())) {
                     continue;
                 }
                 String toBranch = FilterBean.getInstance().getToBranch();
-                if (toBranch != null && !toBranch.trim().isEmpty() && !(gitlabMergeRequest.targetLocalProName+"/"+gitlabMergeRequest.gitlabMergeRequest.getTargetBranch()).toLowerCase().contains(toBranch.toLowerCase())) {
+                if (toBranch != null && !toBranch.trim().isEmpty() && !(gitlabMergeRequest.targetLocalProName + "/" + gitlabMergeRequest.gitlabMergeRequest.getTargetBranch()).toLowerCase().contains(toBranch.toLowerCase())) {
                     continue;
                 }
                 String status = FilterBean.getInstance().getStatus();

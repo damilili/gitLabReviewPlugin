@@ -7,16 +7,17 @@ import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.progress.EmptyProgressIndicator;
-import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.Couple;
 import com.intellij.openapi.vcs.VcsException;
 import com.intellij.openapi.vcs.changes.Change;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.StatusBar;
-import com.intellij.util.ThrowableConvertor;
+import com.intellij.vcs.log.VcsUser;
 import git4idea.GitCommit;
 import git4idea.GitRemoteBranch;
+import git4idea.GitUserRegistry;
 import git4idea.GitUtil;
 import git4idea.changes.GitChangeUtils;
 import git4idea.history.GitHistoryUtils;
@@ -27,19 +28,15 @@ import git4idea.ui.branch.GitCompareBranchesDialog;
 import git4idea.update.GitFetchResult;
 import git4idea.update.GitFetcher;
 import git4idea.util.GitCommitCompareInfo;
-import org.apache.commons.lang.StringUtils;
 import org.gitlab.api.AuthMethod;
 import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.GitlabAPIException;
 import org.gitlab.api.TokenType;
 import org.gitlab.api.models.*;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -160,8 +157,10 @@ public class GitLabUtil {
                                 continue;
                             }
                             GitlabMergeRequestWrap gitlabMergeRequestWrap = new GitlabMergeRequestWrap(mergeRequest);
-                            memberMap.put(mergeRequest.getAssignee().getName(),mergeRequest.getAssignee());
-                            memberMap.put(mergeRequest.getAuthor().getName(),mergeRequest.getAuthor());
+                            if (mergeRequest.getAssignee() != null) {
+                                memberMap.put(mergeRequest.getAssignee().getName(), mergeRequest.getAssignee());
+                            }
+                            memberMap.put(mergeRequest.getAuthor().getName(), mergeRequest.getAuthor());
                             gitlabMergeRequestWrap.srcLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getSourceProjectId());
                             String remoteLocalName = null;
                             if (gitlabMergeRequestWrap.srcLabProject != null) {
@@ -347,45 +346,58 @@ public class GitLabUtil {
 //        /projects/:id/merge_requests/:merge_request_iid/discussions
     }
 
-    public void updateRequest(GitlabMergeRequest mergeRequest, String targetBranch, String title, String des, int assigneeId) {
-        GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
-        try {
-            GitlabMergeRequest gitlabMergeRequest = gitlabAPI.updateMergeRequest(getLabProject(mergeRequest.getWebUrl()).getId(), mergeRequest.getId(), targetBranch, assigneeId, title, des, null, null);
-            mergeRequest.setAssignee(gitlabMergeRequest.getAssignee());
-            mergeRequest.setDescription(gitlabMergeRequest.getDescription());
-            mergeRequest.setTitle(gitlabMergeRequest.getTitle());
-            mergeRequest.setId(gitlabMergeRequest.getId());
-            mergeRequest.setIid(gitlabMergeRequest.getIid());
-            mergeRequest.setState(gitlabMergeRequest.getState());
-            mergeRequest.setCreatedAt(gitlabMergeRequest.getCreatedAt());
-            mergeRequest.setUpdatedAt(gitlabMergeRequest.getUpdatedAt());
-            mergeRequest.setSha(gitlabMergeRequest.getSha());
-            mergeRequest.setMergeStatus(gitlabMergeRequest.getMergeStatus());
-            RMListObservable.getInstance().refreshList();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void closeRequest(GitlabMergeRequest mergeRequest) {
         GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
         try {
+            for (GitRepository gitRepository : GitUtil.getRepositories(project)) {
+                for (GitRemote gitRemote : gitRepository.getRemotes()) {
+                    if (CommonUtil.urlMatch(mergeRequest.getWebUrl(), gitRemote.getFirstUrl())) {
+                        GitUserRegistry gitUserRegistry = GitUserRegistry.getInstance(project);
+                        VirtualFile virtualFile = gitRepository.getRoot();
+                        VcsUser user = gitUserRegistry.getUser(virtualFile);
+                        String assigneeName = null;
+                        if (mergeRequest.getAssignee() != null) {
+                            assigneeName = mergeRequest.getAssignee().getName();
+                        }
+                        if (!mergeRequest.getAuthor().getName().equals(user.getName()) && (assigneeName == null || user == null || !assigneeName.equals(user.getName()))) {
+                            Messages.showMessageDialog("You is not the assignee or the owner, please change yourself to be the assignee in the browser first.", "Message", AllIcons.Ide.Error);
+                            return;
+                        }
+                    }
+                }
+            }
             GitlabMergeRequest gitlabMergeRequest = gitlabAPI.updateMergeRequest(getLabProject(mergeRequest.getWebUrl()).getId(), mergeRequest.getId(), mergeRequest.getTargetBranch(), gitlabAPI.getUser().getId(), null, null, "close", null);
             if (gitlabMergeRequest != null) {
                 StatusBar.Info.set("Close Merge Request Success", project);
             }
+            instance.getAllRequest();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void acceptRequest(GitlabMergeRequest mergeRequest) {
+        for (GitRepository gitRepository : GitUtil.getRepositories(project)) {
+            for (GitRemote gitRemote : gitRepository.getRemotes()) {
+                if (CommonUtil.urlMatch(mergeRequest.getWebUrl(), gitRemote.getFirstUrl())) {
+                    GitUserRegistry gitUserRegistry = GitUserRegistry.getInstance(project);
+                    VirtualFile virtualFile = gitRepository.getRoot();
+                    VcsUser user = gitUserRegistry.getUser(virtualFile);
+                    if (mergeRequest.getAssignee()==null||mergeRequest.getAssignee().getName()== null || user == null || !mergeRequest.getAssignee().getName().equals(user.getName())) {
+                        Messages.showMessageDialog("The assignee is not you, please change you to be the assignee in the browser first.", "Message", AllIcons.Ide.Error);
+                        return;
+                    }
+                }
+            }
+        }
+
         GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
         try {
             GitlabMergeRequest gitlabMergeRequest = gitlabAPI.acceptMergeRequest(getLabProject(mergeRequest.getWebUrl()), mergeRequest.getId(), "Merge branch " + mergeRequest.getSourceBranch() + " into " + mergeRequest.getTargetBranch());
             if (gitlabMergeRequest != null) {
                 StatusBar.Info.set("Merge Request Success", project);
             }
+            instance.getAllRequest();
         } catch (IOException e) {
             e.printStackTrace();
         }
