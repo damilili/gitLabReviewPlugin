@@ -3,8 +3,8 @@ package cn.kuwo.intellij.plugin.ui.MergeRequestDetail;
 import cn.kuwo.intellij.plugin.CommonUtil;
 import cn.kuwo.intellij.plugin.RMListObservable;
 import cn.kuwo.intellij.plugin.actions.*;
-import cn.kuwo.intellij.plugin.bean.FilterBean;
 import cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell.BaseMergeRequestCell;
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -17,7 +17,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.net.URI;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -185,8 +184,6 @@ public class MergeRequestDetail {
     }
 
     public JLabel getAssignee() {
-        JTextField jTextField;
-        JTextArea jTextArea;
         return assignee;
     }
 

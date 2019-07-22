@@ -7,6 +7,8 @@ import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.progress.EmptyProgressIndicator;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.util.Couple;
@@ -16,7 +18,6 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.StatusBar;
 import com.intellij.vcs.log.VcsUser;
 import git4idea.GitCommit;
-import git4idea.GitRemoteBranch;
 import git4idea.GitUserRegistry;
 import git4idea.GitUtil;
 import git4idea.changes.GitChangeUtils;
@@ -33,6 +34,7 @@ import org.gitlab.api.GitlabAPI;
 import org.gitlab.api.GitlabAPIException;
 import org.gitlab.api.TokenType;
 import org.gitlab.api.models.*;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -131,69 +133,92 @@ public class GitLabUtil {
         return remoteHost;
     }
 
-    public List getMergedMergeRequests() {
-        return null;
-    }
 
     public void getAllRequest() {
         //顺便更新下用户列表
         HashMap<String, GitlabUser> memberMap = MemberManager.getInstance().getMemberList();
         ArrayList<GitlabMergeRequestWrap> gitlabMergeRequestWraps = new ArrayList<>();
         GitlabProjectManager gitlabProjectManager = GitlabProjectManager.getInstance(project);
-        try {
-            GitRepositoryManager manager = GitUtil.getRepositoryManager(project);
-            List<GitRepository> repositories = manager.getRepositories();
-            for (GitRepository repository : repositories) {
-                Collection<GitRemote> remotes = repository.getRemotes();
-                for (GitRemote remote : remotes) {
-                    GitlabProject gitlabProject = gitlabProjectManager.getGitlabProject(remote);
-                    String remoteHost = getRemoteHost(remote.getFirstUrl());
-                    String token = getToken(remote.getFirstUrl());
-                    if (token != null && !token.isEmpty()) {
-                        GitlabAPI gitlabAPI = getGitlabAPI(remoteHost);
-                        List<GitlabMergeRequest> mergeRequests = gitlabAPI.getMergeRequests(gitlabProject);
-                        for (GitlabMergeRequest mergeRequest : mergeRequests) {
-                            if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId() && mergeRequest.getProjectId().intValue() != mergeRequest.getTargetProjectId()) {
-                                continue;
+        new Task.Backgroundable(project, "Get All Requests...") {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                try {
+                    GitRepositoryManager manager = GitUtil.getRepositoryManager(project);
+                    List<GitRepository> repositories = manager.getRepositories();
+                    for (GitRepository repository : repositories) {
+                        Collection<GitRemote> remotes = repository.getRemotes();
+                        for (GitRemote remote : remotes) {
+                            indicator.setText("get gitlabProject :" + remote.getFirstUrl());
+                            if (indicator.isCanceled()) {
+                                return;
                             }
-                            GitlabMergeRequestWrap gitlabMergeRequestWrap = new GitlabMergeRequestWrap(mergeRequest);
-                            if (mergeRequest.getAssignee() != null) {
-                                memberMap.put(mergeRequest.getAssignee().getName(), mergeRequest.getAssignee());
-                            }
-                            memberMap.put(mergeRequest.getAuthor().getName(), mergeRequest.getAuthor());
-                            gitlabMergeRequestWrap.srcLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getSourceProjectId());
-                            String remoteLocalName = null;
-                            if (gitlabMergeRequestWrap.srcLabProject != null) {
-                                remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getHttpUrl());
-                                if (remoteLocalName == null || remoteLocalName.isEmpty()) {
-                                    remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getSshUrl());
+                            GitlabProject gitlabProject = gitlabProjectManager.getGitlabProject(remote);
+                            String remoteHost = getRemoteHost(remote.getFirstUrl());
+                            String token = getToken(remote.getFirstUrl());
+                            if (token != null && !token.isEmpty()) {
+                                GitlabAPI gitlabAPI = getGitlabAPI(remoteHost);
+                                indicator.setText("get mergeRequests :" + remoteHost);
+                                if (indicator.isCanceled()) {
+                                    return;
                                 }
-                            }
-                            gitlabMergeRequestWrap.srcLocalProName = remoteLocalName;
-                            if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId()) {
-                                gitlabMergeRequestWrap.targetLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getTargetProjectId());
-                                remoteLocalName = null;
-                                if (gitlabMergeRequestWrap.targetLabProject != null) {
-                                    remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getHttpUrl());
-                                    if (remoteLocalName == null || remoteLocalName.isEmpty()) {
-                                        remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getSshUrl());
+                                List<GitlabMergeRequest> mergeRequests = gitlabAPI.getMergeRequests(gitlabProject);
+                                for (GitlabMergeRequest mergeRequest : mergeRequests) {
+                                    if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId() && mergeRequest.getProjectId().intValue() != mergeRequest.getTargetProjectId()) {
+                                        continue;
                                     }
+                                    GitlabMergeRequestWrap gitlabMergeRequestWrap = new GitlabMergeRequestWrap(mergeRequest);
+                                    if (mergeRequest.getAssignee() != null) {
+                                        memberMap.put(mergeRequest.getAssignee().getName(), mergeRequest.getAssignee());
+                                    }
+                                    memberMap.put(mergeRequest.getAuthor().getName(), mergeRequest.getAuthor());
+                                    indicator.setText("get gitlabProject :" + remoteHost + ":" + mergeRequest.getSourceProjectId());
+                                    if (indicator.isCanceled()) {
+                                        return;
+                                    }
+                                    gitlabMergeRequestWrap.srcLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getSourceProjectId());
+                                    String remoteLocalName = null;
+                                    if (gitlabMergeRequestWrap.srcLabProject != null) {
+                                        remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getHttpUrl());
+                                        if (remoteLocalName == null || remoteLocalName.isEmpty()) {
+                                            remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.srcLabProject.getSshUrl());
+                                        }
+                                    }
+                                    gitlabMergeRequestWrap.srcLocalProName = remoteLocalName;
+                                    indicator.setText("get gitlabProject :" + remoteHost + ":" + mergeRequest.getTargetProjectId());
+                                    if (indicator.isCanceled()) {
+                                        return;
+                                    }
+                                    if (mergeRequest.getTargetProjectId().intValue() != mergeRequest.getSourceProjectId()) {
+                                        gitlabMergeRequestWrap.targetLabProject = gitlabProjectManager.getGitlabProject(remoteHost, mergeRequest.getTargetProjectId());
+                                        remoteLocalName = null;
+                                        if (gitlabMergeRequestWrap.targetLabProject != null) {
+                                            remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getHttpUrl());
+                                            if (remoteLocalName == null || remoteLocalName.isEmpty()) {
+                                                remoteLocalName = LocalRepositoryManager.getInstance(project).getRemoteName(gitlabMergeRequestWrap.targetLabProject.getSshUrl());
+                                            }
+                                        }
+                                        gitlabMergeRequestWrap.targetLocalProName = remoteLocalName;
+                                    } else {
+                                        gitlabMergeRequestWrap.targetLabProject = gitlabProject;
+                                        gitlabMergeRequestWrap.targetLocalProName = remote.getName();
+                                    }
+                                    mergeRequest.setWebUrl(gitlabProject.getWebUrl());
+                                    gitlabMergeRequestWraps.add(gitlabMergeRequestWrap);
                                 }
-                                gitlabMergeRequestWrap.targetLocalProName = remoteLocalName;
-                            } else {
-                                gitlabMergeRequestWrap.targetLabProject = gitlabProject;
-                                gitlabMergeRequestWrap.targetLocalProName = remote.getName();
                             }
-                            mergeRequest.setWebUrl(gitlabProject.getWebUrl());
-                            gitlabMergeRequestWraps.add(gitlabMergeRequestWrap);
                         }
                     }
+                    ApplicationManager.getApplication().invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            RMListObservable.getInstance().resetList(gitlabMergeRequestWraps);
+                        }
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-            RMListObservable.getInstance().resetList(gitlabMergeRequestWraps);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        }.queue();
     }
 
     private String getToken(String remoteUrl) {
@@ -294,13 +319,6 @@ public class GitLabUtil {
         return result;
     }
 
-    public GitRemoteBranch getCurLocalTrackedRemoteBranch() {
-        for (GitRepository repository : GitUtil.getRepositories(project)) {
-            GitRemoteBranch trackedBranch = repository.getCurrentBranch().findTrackedBranch(repository);
-            return trackedBranch;
-        }
-        return null;
-    }
 
     public List<GitlabProjectMember> getGroupUser(GitlabProject labProject) {
         try {
@@ -383,7 +401,7 @@ public class GitLabUtil {
                     GitUserRegistry gitUserRegistry = GitUserRegistry.getInstance(project);
                     VirtualFile virtualFile = gitRepository.getRoot();
                     VcsUser user = gitUserRegistry.getUser(virtualFile);
-                    if (mergeRequest.getAssignee()==null||mergeRequest.getAssignee().getName()== null || user == null || !mergeRequest.getAssignee().getName().equals(user.getName())) {
+                    if (mergeRequest.getAssignee() == null || mergeRequest.getAssignee().getName() == null || user == null || !mergeRequest.getAssignee().getName().equals(user.getName())) {
                         Messages.showMessageDialog("The assignee is not you, please change you to be the assignee in the browser first.", "Message", AllIcons.Ide.Error);
                         return;
                     }
