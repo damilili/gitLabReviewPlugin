@@ -82,14 +82,14 @@ public class BaseMergeRequestCell {
         } else if (mergeRequestWrap.srcLabProject != null) {
             srcLocalName = mergeRequestWrap.srcLabProject.getPathWithNamespace() + ":";
         } else {
-            srcLocalName = "??????:";
+            srcLocalName = "<html><font color=\"red\">Unknown</font></html>:";
         }
         if (mergeRequestWrap.targetLocalProName != null && !mergeRequestWrap.targetLocalProName.isEmpty()) {
             targetLocalName = mergeRequestWrap.targetLocalProName + "/";
         } else if (mergeRequestWrap.targetLabProject != null) {
             targetLocalName = mergeRequestWrap.targetLabProject.getPathWithNamespace() + ":";
         } else {
-            targetLocalName = "??????:";
+            targetLocalName = "<html><font color=\"red\">Unknown</font></html>:";
         }
         baseMergeRequestCell.getFromBranch().setText(srcLocalName + mergeRequest.getSourceBranch());
         baseMergeRequestCell.getToBranch().setText(targetLocalName + mergeRequest.getTargetBranch());
@@ -97,7 +97,7 @@ public class BaseMergeRequestCell {
         return baseMergeRequestCell;
     }
 
-    public void setBackGround(int color) {
-        basePan.setBackground(Color.decode(color + ""));
+    public void setBackGround(Color color) {
+        basePan.setBackground(color);
     }
 }

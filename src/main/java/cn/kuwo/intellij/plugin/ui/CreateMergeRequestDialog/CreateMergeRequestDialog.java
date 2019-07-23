@@ -4,6 +4,7 @@ import cn.kuwo.intellij.plugin.GitLabUtil;
 import cn.kuwo.intellij.plugin.bean.Branch;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
@@ -57,6 +58,8 @@ public class CreateMergeRequestDialog extends DialogWrapper {
     private ItemListener repositoryItemListener;
     private ProgressIndicator showdiffProgress;
     private ProgressIndicator initProgressIndicator;
+    private GitRepository[] repositories;
+    private GitRemote[] gitRemotes;
 
     public CreateMergeRequestDialog(@Nullable Project project) {
         super(project);
@@ -68,6 +71,7 @@ public class CreateMergeRequestDialog extends DialogWrapper {
     @Override
     protected void init() {
         super.init();
+        initView();
         setTitle("Create Merge Request");
         setVerticalStretch(1f);
         gitlabUtil = GitLabUtil.getInstance(project);
@@ -76,22 +80,29 @@ public class CreateMergeRequestDialog extends DialogWrapper {
             public void run(@NotNull ProgressIndicator indicator) {
                 initProgressIndicator = indicator;
                 indicator.setText("get repositories...");
-                refreshRepoBox();
+                refreshRepoBoxData();
                 if (initProgressIndicator.isCanceled()) {
                     Thread.interrupted();
                 }
                 indicator.setText("get remotes...");
-                refreshRemoteBox();
+                refreshRemoteBoxData();
                 if (initProgressIndicator.isCanceled()) {
                     Thread.interrupted();
                 }
                 indicator.setText("get remote branches...");
-                refreshBranchBox();
+                refreshBranchBoxData();
                 if (initProgressIndicator.isCanceled()) {
                     Thread.interrupted();
                 }
                 indicator.setText("get remote group user...");
-                refreshAssigeeBox();
+                refreshAssigeeBoxData();
+                ApplicationManager.getApplication().invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        refreshRepoBox();
+                        refreshRemoteBox();
+                    }
+                },ModalityState.any());
                 initProgressIndicator = null;
             }
         }.queue();
@@ -116,6 +127,87 @@ public class CreateMergeRequestDialog extends DialogWrapper {
         assigneeBox.setEditable(false);
         assigneeBox.setBounds(140, 170, 180, 20);
         mergeTitle.addFocusListener(new JTextFieldHintListener(mergeTitle));
+    }
+
+    private void initView() {
+        //
+        refreshRepoBoxData();
+        refreshRepoBox();
+        repositoryItemListener = new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    remoteBox.removeAllItems();
+                    curRepository = repositories[repositoryBox.getSelectedIndex()];
+                    new Task.Backgroundable(project, "Get Remote Repository Info") {
+                        @Override
+                        public void run(@NotNull ProgressIndicator indicator) {
+                            System.out.println("refreshRepoBox");
+                            indicator.setText("get remotes...");
+                            refreshRemoteBoxData();
+                            ApplicationManager.getApplication().invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    refreshRemoteBox();
+                                }
+                            });
+                        }
+                    }.queue();
+                }
+            }
+        };
+        repositoryBox.addItemListener(repositoryItemListener);
+        if (repositories.length > 1) {
+            labelRepository.setVisible(true);
+            repositoryBox.setVisible(true);
+        } else if (repositories.length == 1) {
+            labelRepository.setVisible(false);
+            repositoryBox.setVisible(false);
+        }
+//
+        remoteItemListener = new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    curRemote = gitRemotes[remoteBox.getSelectedIndex()];
+                    sourceBranch.removeAllItems();
+                    targetBranch.removeAllItems();
+                    refreshTitle();
+                    new Task.Backgroundable(project, "Get Remote Repository Info") {
+                        @Override
+                        public void run(@NotNull ProgressIndicator indicator) {
+                            System.out.println("refreshRemoteBox");
+                            indicator.setText("get remote branches...");
+                            refreshBranchBoxData();
+                            indicator.setText("get remote group user...");
+                            refreshAssigeeBoxData();
+                            ApplicationManager.getApplication().invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    refreshBranchBox();
+                                    refreshAssigeeBox();
+                                }
+                            });
+                        }
+                    }.queue();
+                }
+            }
+        };
+        remoteBox.addItemListener(remoteItemListener);
+        //
+        sourceBranch.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                refreshTitle();
+            }
+        });
+        //
+        targetBranch.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                refreshTitle();
+            }
+        });
     }
 
     @Override
@@ -186,134 +278,67 @@ public class CreateMergeRequestDialog extends DialogWrapper {
         return mainView;
     }
 
-    private void refreshRepoBox() {
+    private void refreshRepoBoxData() {
         Collection<GitRepository> repositories1 = GitUtil.getRepositories(project);
-        GitRepository[] repositories = repositories1.toArray(new GitRepository[repositories1.size()]);
-        Runnable refreshRepoBox = new Runnable() {
-            @Override
-            public void run() {
-                if (repositoryItemListener == null) {
-                    repositoryItemListener = new ItemListener() {
-                        @Override
-                        public void itemStateChanged(ItemEvent e) {
-                            if (e.getStateChange() == ItemEvent.SELECTED) {
-                                curRepository = repositories[repositoryBox.getSelectedIndex()];
-                                new Task.Backgroundable(project, "Get Remote Repository Info") {
-                                    @Override
-                                    public void run(@NotNull ProgressIndicator indicator) {
-                                        System.out.println("refreshRepoBox");
-                                        indicator.setText("get remotes...");
-                                        refreshRemoteBox();
-                                    }
-                                }.queue();
-                            }
-                        }
-                    };
-                    repositoryBox.addItemListener(repositoryItemListener);
-                }
+        repositories = repositories1.toArray(new GitRepository[repositories1.size()]);
+    }
 
-                if (repositories.length > 1) {
-                    labelRepository.setVisible(true);
-                    repositoryBox.setVisible(true);
-                } else if (repositories.length == 1) {
-                    labelRepository.setVisible(false);
-                    repositoryBox.setVisible(false);
-                }
-                for (int i = 0; i < repositories.length; i++) {
-                    GitRepository repository = repositories[i];
-                    repositoryBox.addItem(repository.getRoot().getName());
-                }
-                curRepository = repositories[repositoryBox.getSelectedIndex()];
+    private void refreshRepoBox() {
+        if (repositories != null) {
+            for (int i = 0; i < repositories.length; i++) {
+                GitRepository repository = repositories[i];
+                repositoryBox.addItem(repository.getRoot().getName());
             }
-        };
-        ApplicationManager.getApplication().invokeLater(refreshRepoBox);
+            curRepository = repositories[repositoryBox.getSelectedIndex()];
+        }
+    }
 
+    private void refreshRemoteBoxData() {
+        if (curRepository != null) {
+            Collection<GitRemote> remotes = curRepository.getRemotes();
+            gitRemotes = remotes.toArray(new GitRemote[remotes.size()]);
+        }
     }
 
     private void refreshRemoteBox() {
-        Collection<GitRemote> remotes = curRepository.getRemotes();
-        GitRemote[] gitRemotes = remotes.toArray(new GitRemote[remotes.size()]);
-        ApplicationManager.getApplication().invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                if (remoteItemListener == null) {
-                    remoteItemListener = new ItemListener() {
-                        @Override
-                        public void itemStateChanged(ItemEvent e) {
-                            if (e.getStateChange() == ItemEvent.SELECTED) {
-                                curRemote = gitRemotes[remoteBox.getSelectedIndex()];
-                                new Task.Backgroundable(project, "Get Remote Repository Info") {
-                                    @Override
-                                    public void run(@NotNull ProgressIndicator indicator) {
-                                        System.out.println("refreshRemoteBox");
-                                        indicator.setText("get remote branches...");
-                                        refreshBranchBox();
-                                        indicator.setText("get remote group user...");
-                                        refreshAssigeeBox();
-                                    }
-                                }.queue();
-                            }
-                        }
-                    };
-                    remoteBox.addItemListener(remoteItemListener);
-                }
-                remoteBox.removeAllItems();
-                for (GitRemote gitRemote : gitRemotes) {
-                    remoteBox.addItem(gitRemote.getName());
-                }
-                curRemote = gitRemotes[remoteBox.getSelectedIndex()];
+        if (gitRemotes != null) {
+            for (GitRemote gitRemote : gitRemotes) {
+                remoteBox.addItem(gitRemote.getName());
             }
-        });
+            curRemote = gitRemotes[remoteBox.getSelectedIndex()];
+        }
+    }
+
+    private void refreshBranchBoxData() {
+        if (curRepository != null) {
+            curRemoteBranches = (ArrayList<Branch>) gitlabUtil.getRemoteBranches(curRepository);
+        }
     }
 
     private void refreshBranchBox() {
-        curRemoteBranches = (ArrayList<Branch>) gitlabUtil.getRemoteBranches(curRepository);
-        ApplicationManager.getApplication().invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                sourceBranch.removeAllItems();
-                targetBranch.removeAllItems();
-                for (Branch branch : curRemoteBranches) {
-                    System.out.println("branch===" + branch.gitlabBranch.getName());
-                    sourceBranch.addItem(branch.gitlabBranch.getName());
-                    targetBranch.addItem(branch.gitlabBranch.getName());
-                }
-                if (sourceBranch.getItemListeners() == null || sourceBranch.getItemListeners().length == 0) {
-                    sourceBranch.addItemListener(new ItemListener() {
-                        @Override
-                        public void itemStateChanged(ItemEvent e) {
-                            refreshTitle();
-                        }
-                    });
-                }
-                if (targetBranch.getItemListeners() == null || targetBranch.getItemListeners().length == 0) {
-                    targetBranch.addItemListener(new ItemListener() {
-                        @Override
-                        public void itemStateChanged(ItemEvent e) {
-                            refreshTitle();
-                        }
-                    });
-                }
-                refreshTitle();
+        if (curRemoteBranches != null) {
+            for (Branch branch : curRemoteBranches) {
+                System.out.println("branch===" + branch.gitlabBranch.getName());
+                sourceBranch.addItem(branch.gitlabBranch.getName());
+                targetBranch.addItem(branch.gitlabBranch.getName());
             }
-        });
+        }
+        refreshTitle();
+    }
 
+    private void refreshAssigeeBoxData() {
+        if (curRemote != null) {
+            GitlabProject labProject = GitLabUtil.getInstance(project).getLabProject(curRemote.getFirstUrl());
+            curGroupUser = gitlabUtil.getGroupUser(labProject);
+        }
     }
 
     private void refreshAssigeeBox() {
-        GitlabProject labProject = GitLabUtil.getInstance(project).getLabProject(curRemote.getFirstUrl());
-        curGroupUser = gitlabUtil.getGroupUser(labProject);
-        ApplicationManager.getApplication().invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                assigneeBox.removeAllItems();
-                if (labProject != null) {
-                    for (GitlabProjectMember gitlabProjectMember : curGroupUser) {
-                        assigneeBox.addItem(gitlabProjectMember.getName());
-                    }
-                }
+        if (curGroupUser != null) {
+            for (GitlabProjectMember gitlabProjectMember : curGroupUser) {
+                assigneeBox.addItem(gitlabProjectMember.getName());
             }
-        });
+        }
     }
 
     public class JTextFieldHintListener implements FocusListener {

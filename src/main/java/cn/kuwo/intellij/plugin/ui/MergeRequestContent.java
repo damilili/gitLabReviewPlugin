@@ -1,13 +1,12 @@
 package cn.kuwo.intellij.plugin.ui;
 
 import cn.kuwo.intellij.plugin.CommonUtil;
-import cn.kuwo.intellij.plugin.LocalRepositoryManager;
 import cn.kuwo.intellij.plugin.RMListObservable;
 import cn.kuwo.intellij.plugin.actions.*;
 import cn.kuwo.intellij.plugin.bean.Branch;
 import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
 import cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell.BaseMergeRequestCell;
-import cn.kuwo.intellij.plugin.ui.MergeRequestDetail.MergeRequestDetail;
+import cn.kuwo.intellij.plugin.ui.MergeRequestDetail.MRdetail;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
@@ -30,8 +29,6 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -74,6 +71,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         dataModel = new DataModel();
         requestList.setModel(dataModel);
         requestList.setCellRenderer(new MRCommentCellRender());
+        requestList.setSelectionBackground(Color.decode("0x4B6EAF"));
         requestList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
@@ -100,8 +98,9 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                         CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
                         return;
                     }
-                    MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project, gitlabMergeRequest);
-                    horizontalSplitter.setSecondComponent(mergeRequestDetail.getBasePan());
+//                    MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project, gitlabMergeRequest);
+                    MRdetail mergeRequestDetail1 = MRdetail.getMergeRequestDetail(project, gitlabMergeRequest);
+                    horizontalSplitter.setSecondComponent(mergeRequestDetail1.getBasePan());
                 }
             }
         });
@@ -179,9 +178,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
             if (mergeRequest != null) {
                 BaseMergeRequestCell mergeRequestCell = BaseMergeRequestCell.getMergeRequestCell(mergeRequest);
                 if (requestList.getSelectedIndex() == index) {
-                    mergeRequestCell.setBackGround(0xff4B6EAF);
-                } else {
-                    mergeRequestCell.setBackGround(0xff3C3F41);
+                    mergeRequestCell.setBackGround(requestList.getSelectionBackground());
                 }
                 return mergeRequestCell.getBasePan();
             }
