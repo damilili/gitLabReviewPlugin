@@ -259,33 +259,6 @@ public class GitLabUtil {
     }
 
 
-    public ArrayList<Branch> getRemoteBranches() {
-        ArrayList<Branch> result = new ArrayList<>();
-        GitRepositoryManager manager = GitUtil.getRepositoryManager(project);
-        List<GitRepository> repositories = manager.getRepositories();
-        for (GitRepository repository : repositories) {
-            Collection<GitRemote> remotes = repository.getRemotes();
-            for (GitRemote remote : remotes) {
-                String name = remote.getName();
-                GitlabProject labProject = getLabProject(remote.getFirstUrl());
-                try {
-                    List<GitlabBranch> branches = getGitlabAPI(remote.getFirstUrl()).getBranches(labProject.getId());
-                    for (GitlabBranch branch : branches) {
-                        Branch tem = new Branch();
-                        tem.gitlabProject = labProject;
-                        tem.gitlabBranch = branch;
-                        tem.repoName = name;
-                        result.add(tem);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        System.out.println("result==" + result.size());
-        return result;
-    }
-
     public List<Branch> getRemoteBranches(GitRepository gitRepository) {
         ArrayList<Branch> result = new ArrayList<>();
         HashSet<String> tem = new HashSet<>();
@@ -358,10 +331,25 @@ public class GitLabUtil {
     }
 
     public void commentRequest(GitlabMergeRequest mergeRequest, String des) {
+        GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
+        try {
+            GitlabNote note = gitlabAPI.createNote(mergeRequest, des);
+            if (note != null) {
+                RMCommentsObservable.getInstance().refreshComment();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void getDiscussions(GitlabMergeRequest mergeRequest, String des) {
-//        /projects/:id/merge_requests/:merge_request_iid/discussions
+    public List<GitlabNote> getDiscussions(GitlabMergeRequest mergeRequest) {
+        GitlabAPI gitlabAPI = getGitlabAPI(mergeRequest.getWebUrl());
+        try {
+            return gitlabAPI.getNotes(mergeRequest);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public void closeRequest(GitlabMergeRequest mergeRequest) {

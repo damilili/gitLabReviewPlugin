@@ -1,20 +1,26 @@
 package cn.kuwo.intellij.plugin.ui.MergeRequestDetail;
 
 import cn.kuwo.intellij.plugin.CommonUtil;
+import cn.kuwo.intellij.plugin.GitLabUtil;
 import cn.kuwo.intellij.plugin.actions.*;
-import cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell.BaseMergeRequestCell;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.actionSystem.ActionToolbar;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.DefaultActionGroup;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import org.gitlab.api.models.GitlabMergeRequest;
+import org.gitlab.api.models.GitlabNote;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.List;
 
 public class MRdetail {
     private Project project;
@@ -29,10 +35,13 @@ public class MRdetail {
     private JLabel assignee;
     private JLabel targetBranch;
     public JPanel base;
+    private JEditorPane comments;
+    private JLabel commentCount;
     private GitlabMergeRequest mergeRequest;
     private ActionToolbar actionToolbar;
     private SimpleToolWindowPanel basePan;
     private static MRdetail mRdetail;
+    private Thread thread;
 
     public MRdetail(Project project) {
         this.project = project;
@@ -52,8 +61,8 @@ public class MRdetail {
         this.title.setText(title);
         this.assignee.setText(mergeRequest.getAssignee() == null ? "<html><font color=\"red\">Unspecified</font></html>" : mergeRequest.getAssignee().getName());
         author.setText(mergeRequest.getAuthor().getName());
-        createdTime.setText(BaseMergeRequestCell.sdf.format(mergeRequest.getCreatedAt()));
-        updated.setText(BaseMergeRequestCell.sdf.format(mergeRequest.getUpdatedAt()));
+        createdTime.setText(CommonUtil.sdf.format(mergeRequest.getCreatedAt()));
+        updated.setText(CommonUtil.sdf.format(mergeRequest.getUpdatedAt()));
         srcBranch.setText(mergeRequest.getSourceBranch());
         targetBranch.setText(mergeRequest.getTargetBranch());
         description.setText(mergeRequest.getDescription());
@@ -74,8 +83,11 @@ public class MRdetail {
                 ((RequestDetailAction) anAction).setRequest(mergeRequest);
             }
         }
+        refreshComments();
+
         return basePan;
     }
+
 
     private ActionToolbar getDetailToolBar(Project project) {
         if (actionToolbar == null) {
@@ -108,4 +120,42 @@ public class MRdetail {
         }
     }
 
+    public void refreshComments() {
+        if (thread != null && (thread.isAlive() || !thread.isInterrupted())) {
+            thread.interrupt();
+        }
+        new Task.Backgroundable(project, "Get Merge Request Comments") {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                thread = Thread.currentThread();
+                List<GitlabNote> discussions = GitLabUtil.getInstance(project).getDiscussions(mergeRequest);
+                if (indicator.isCanceled()) {
+                    thread.interrupt();
+                }
+                ApplicationManager.getApplication().invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        commentCount.setText("comments(" + discussions.size() + "):");
+                        StringBuffer conmmentInfo = new StringBuffer();
+                        conmmentInfo.append("<html><head></head> <body>");
+                        for (int i = discussions.size() - 1; i >= 0; i--) {
+                            GitlabNote discussion = discussions.get(i);
+                            conmmentInfo.append("<b>");
+                            conmmentInfo.append(discussion.getAuthor().getName() + ": ");
+                            conmmentInfo.append("</b>");
+                            conmmentInfo.append(CommonUtil.sdf.format(discussion.getCreatedAt()));
+                            conmmentInfo.append("<br/>");
+                            conmmentInfo.append(discussion.getBody());
+                            conmmentInfo.append("<br/>");
+                        }
+                        conmmentInfo.append("</body></html>");
+                        comments.setContentType("text/html");
+                        String t = conmmentInfo.toString();
+                        comments.setText(t);
+                    }
+                }, ModalityState.any());
+                thread = null;
+            }
+        }.queue();
+    }
 }

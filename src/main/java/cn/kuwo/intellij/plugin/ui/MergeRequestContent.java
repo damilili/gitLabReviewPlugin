@@ -1,6 +1,7 @@
 package cn.kuwo.intellij.plugin.ui;
 
 import cn.kuwo.intellij.plugin.CommonUtil;
+import cn.kuwo.intellij.plugin.RMCommentsObservable;
 import cn.kuwo.intellij.plugin.RMListObservable;
 import cn.kuwo.intellij.plugin.actions.*;
 import cn.kuwo.intellij.plugin.bean.Branch;
@@ -54,6 +55,15 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         }
     };
     private JBSplitter horizontalSplitter;
+    private Observer commentObserver = new Observer() {
+        @Override
+        public void update(Observable o, Object arg) {
+            if (mergeRequestDetail1 != null) {
+                mergeRequestDetail1.refreshComments();
+            }
+        }
+    };
+    private MRdetail mergeRequestDetail1;
 
     public MergeRequestContent(Project project) {
         this.project = project;
@@ -70,7 +80,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         horizontalSplitter.setFirstComponent(basePan);
         dataModel = new DataModel();
         requestList.setModel(dataModel);
-        requestList.setCellRenderer(new MRCommentCellRender());
+        requestList.setCellRenderer(new MRCellRender());
         requestList.setSelectionBackground(Color.decode("0x4B6EAF"));
         requestList.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -98,19 +108,20 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                         CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
                         return;
                     }
-//                    MergeRequestDetail mergeRequestDetail = MergeRequestDetail.getMergeRequestDetail(project, gitlabMergeRequest);
-                    MRdetail mergeRequestDetail1 = MRdetail.getMergeRequestDetail(project, gitlabMergeRequest);
+                    mergeRequestDetail1 = MRdetail.getMergeRequestDetail(project, gitlabMergeRequest);
                     horizontalSplitter.setSecondComponent(mergeRequestDetail1.getBasePan());
                 }
             }
         });
         RMListObservable.getInstance().addObserver(requestListObserver);
+        RMCommentsObservable.getInstance().addObserver(commentObserver);
         return horizontalSplitter;
     }
 
     @Override
     public void disposeContent() {
         RMListObservable.getInstance().deleteObserver(requestListObserver);
+        RMCommentsObservable.getInstance().deleteObserver(commentObserver);
     }
 
     private ActionToolbar getToolBar(Project project) {
@@ -171,7 +182,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         }
     }
 
-    public class MRCommentCellRender extends DefaultListCellRenderer {
+    public class MRCellRender extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             GitlabMergeRequestWrap mergeRequest = value instanceof GitlabMergeRequestWrap ? ((GitlabMergeRequestWrap) value) : null;

@@ -1,5 +1,6 @@
 package cn.kuwo.intellij.plugin.ui.BaseMergeRequestCell;
 
+import cn.kuwo.intellij.plugin.CommonUtil;
 import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
 import com.intellij.icons.AllIcons;
 import org.gitlab.api.models.GitlabMergeRequest;
@@ -64,14 +65,14 @@ public class BaseMergeRequestCell {
     private JLabel fromBranch;
     private JLabel toBranch;
 
-    public static SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+
 
     public static BaseMergeRequestCell getMergeRequestCell(GitlabMergeRequestWrap mergeRequestWrap) {
         GitlabMergeRequest mergeRequest = mergeRequestWrap.gitlabMergeRequest;
         BaseMergeRequestCell baseMergeRequestCell = new BaseMergeRequestCell();
         baseMergeRequestCell.getMrTitle().setText(mergeRequest.getTitle());
         baseMergeRequestCell.getMrAuthor().setText(mergeRequest.getAuthor().getName());
-        baseMergeRequestCell.getUpdateTime().setText(sdf.format(mergeRequest.getCreatedAt()));
+        baseMergeRequestCell.getUpdateTime().setText(CommonUtil.sdf.format(mergeRequest.getCreatedAt()));
         baseMergeRequestCell.getMrState().setText(mergeRequest.getState());
         baseMergeRequestCell.getReviewer().setIcon(AllIcons.Vcs.Arrow_right);
         baseMergeRequestCell.getReviewer().setText(mergeRequest.getAssignee() == null ? "<html><font color=\"red\">Unspecified</font></html>" : mergeRequest.getAssignee().getName());

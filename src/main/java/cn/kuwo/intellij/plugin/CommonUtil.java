@@ -4,6 +4,7 @@ import org.apache.commons.lang.StringUtils;
 
 import java.awt.*;
 import java.net.URI;
+import java.text.SimpleDateFormat;
 
 public class CommonUtil {
     public static void openWebPage(String uri) {
@@ -23,4 +24,5 @@ public class CommonUtil {
         formattedRemoteUrl = formattedRemoteUrl.replace("http://", "");
         return StringUtils.isNotBlank(formattedApiUrl) && StringUtils.isNotBlank(formattedRemoteUrl) && formattedApiUrl.toLowerCase().contains(formattedRemoteUrl.toLowerCase());
     }
+    public static SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 }
