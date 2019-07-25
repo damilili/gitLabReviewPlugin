@@ -2,10 +2,17 @@
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="cn.kuwo.intellij.plugin.ui.SettingUi">
   <grid id="27dc6" binding="basePan" layout-manager="FormLayout">
     <rowspec value="center:d:noGrow"/>
-    <rowspec value="top:4dlu:noGrow"/>
-    <rowspec value="center:74px:noGrow"/>
-    <colspec value="left:73dlu:noGrow"/>
-    <colspec value="fill:775px:noGrow"/>
+    <rowspec value="center:35px:noGrow"/>
+    <colspec value="left:47dlu:noGrow"/>
+    <colspec value="fill:332px:grow"/>
+    <colspec value="fill:max(d;4px):noGrow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:d:grow"/>
+    <colspec value="fill:max(d;4px):noGrow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:d:grow"/>
+    <colspec value="left:4dlu:noGrow"/>
+    <colspec value="fill:d:grow"/>
     <constraints>
       <xy x="20" y="8" width="714" height="185"/>
     </constraints>
