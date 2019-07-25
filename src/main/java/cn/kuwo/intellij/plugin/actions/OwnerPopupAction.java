@@ -22,11 +22,9 @@ import java.util.Observable;
 import java.util.Observer;
 
 public final class OwnerPopupAction extends BasePopupAction {
-    private final Project project;
 
-    public OwnerPopupAction(Project project, String filterName) {
+    public OwnerPopupAction(String filterName) {
         super(filterName);
-        this.project = project;
         RMListObservable.getInstance().addObserver(new Observer() {
             @Override
             public void update(Observable o, Object arg) {
@@ -63,7 +61,7 @@ public final class OwnerPopupAction extends BasePopupAction {
         addSelectItem(actionConsumer);
     }
 
-    protected void addMeItem(Consumer<AnAction> actionConsumer,Project project) {
+    protected void addMeItem(Consumer<AnAction> actionConsumer, Project project) {
         actionConsumer.consume(new DumbAwareAction("Me") {
             @Override
             public void actionPerformed(AnActionEvent e) {

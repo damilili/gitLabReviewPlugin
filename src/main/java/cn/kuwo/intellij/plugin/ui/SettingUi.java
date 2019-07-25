@@ -32,6 +32,7 @@ public class SettingUi implements Configurable {
     private JComboBox<String> repositoryList;
     private JButton btToken;
     private JTextField token;
+    public static final String SETTINGNAME = "GitReviewMerge";
 
     public SettingUi(Project project) {
         this.project = project;
@@ -81,7 +82,7 @@ public class SettingUi implements Configurable {
     @Nls
     @Override
     public String getDisplayName() {
-        return "GitReviewMerge";
+        return SETTINGNAME ;
     }
 
     @Nullable

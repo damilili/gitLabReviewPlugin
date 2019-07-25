@@ -222,6 +222,35 @@ public class GitLabUtil {
         }.queue();
     }
 
+    /**
+     * @return 检查是否所有的主机都配有token 0：部分未配置 -1： 全部都没配置 1：全部配置了
+     */
+    public int checkTokens() {
+        HashSet<String> remoteSet = new HashSet();
+        Collection<GitRepository> repositories = GitUtil.getRepositories(project);
+        for (GitRepository repository : repositories) {
+            for (GitRemote gitRemote : repository.getRemotes()) {
+                remoteSet.add(getRemoteHost(gitRemote.getFirstUrl()));
+            }
+        }
+        PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(project);
+//        remoteSet.size()
+        int noSetSize=0;
+        for (String remote : remoteSet) {
+            String value = propertiesComponent.getValue(getRemoteHost(remote));
+            if (value == null || value.isEmpty()) {
+                noSetSize++;
+            }
+        }
+        if (noSetSize==0) {
+            return -1;
+        }
+        if (remoteSet.size()>noSetSize) {
+            return 0;
+        }
+        return 1;
+    }
+
     private String getToken(String remoteUrl) {
         PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(project);
         return propertiesComponent.getValue(getRemoteHost(remoteUrl));

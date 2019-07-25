@@ -152,13 +152,18 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         ReviewerPopupAction reviewerPopupAction = new ReviewerPopupAction(project, "Reviewer");
         toolBarActionGroup.add(reviewerPopupAction);
 //        发起者
-        OwnerPopupAction ownerPopupAction = new OwnerPopupAction(project, "Owner");
+        OwnerPopupAction ownerPopupAction = new OwnerPopupAction( "Owner");
         toolBarActionGroup.add(ownerPopupAction);
         //分割线
         toolBarActionGroup.addSeparator();
 //        刷新
-        RefreshAction refreshAction = new RefreshAction(project);
+        RefreshAction refreshAction = new RefreshAction();
         toolBarActionGroup.add(refreshAction);
+        //分割线
+        toolBarActionGroup.addSeparator();
+        //设置
+        SettingAction settingAction = new SettingAction();
+        toolBarActionGroup.add(settingAction);
         return ActionManager.getInstance().createActionToolbar("GitMergeRequest.Toolbar", toolBarActionGroup, true);
     }
 
