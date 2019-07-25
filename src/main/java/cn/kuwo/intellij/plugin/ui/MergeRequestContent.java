@@ -59,7 +59,12 @@ public class MergeRequestContent implements ChangesViewContentProvider {
         @Override
         public void update(Observable o, Object arg) {
             if (mergeRequestDetail1 != null) {
-                mergeRequestDetail1.refreshComments();
+                if (arg instanceof GitlabMergeRequestWrap) {
+                    mergeRequestDetail1 = MRdetail.getMergeRequestDetail(project, ((GitlabMergeRequestWrap) arg).gitlabMergeRequest);
+                    horizontalSplitter.setSecondComponent(mergeRequestDetail1.getBasePan());
+                } else {
+                    mergeRequestDetail1.refreshComments();
+                }
             }
         }
     };
@@ -108,6 +113,7 @@ public class MergeRequestContent implements ChangesViewContentProvider {
                         CommonUtil.openWebPage(gitlabMergeRequest.getWebUrl() + "/merge_requests/" + gitlabMergeRequest.getIid());
                         return;
                     }
+                    RMListObservable.getInstance().setCurrentRequest(gitlabMergeRequest);
                     mergeRequestDetail1 = MRdetail.getMergeRequestDetail(project, gitlabMergeRequest);
                     horizontalSplitter.setSecondComponent(mergeRequestDetail1.getBasePan());
                 }

@@ -24,4 +24,9 @@ public class RMCommentsObservable extends Observable {
           setChanged();
           notifyObservers();
     }
+
+    public void refreshRequest(GitlabMergeRequestWrap gitlabMergeRequest) {
+        setChanged();
+        notifyObservers(gitlabMergeRequest);
+    }
 }

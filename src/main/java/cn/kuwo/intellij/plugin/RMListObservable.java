@@ -3,6 +3,7 @@ package cn.kuwo.intellij.plugin;
 import cn.kuwo.intellij.plugin.actions.StatusPopupAction;
 import cn.kuwo.intellij.plugin.bean.FilterBean;
 import cn.kuwo.intellij.plugin.bean.GitlabMergeRequestWrap;
+import org.gitlab.api.models.GitlabMergeRequest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,10 +24,23 @@ public class RMListObservable extends Observable {
         return instance;
     }
 
+    GitlabMergeRequest currentRequest;
+
+    public void setCurrentRequest(GitlabMergeRequest currentRequest) {
+        this.currentRequest = currentRequest;
+    }
+
     public void refreshList() {
         List<GitlabMergeRequestWrap> result = new ArrayList<>();
         if (gitlabMergeRequests != null) {
             for (GitlabMergeRequestWrap gitlabMergeRequest : gitlabMergeRequests) {
+                if (currentRequest != null) {
+                    if (currentRequest.getProjectId().intValue() == gitlabMergeRequest.gitlabMergeRequest.getProjectId() &&
+                            currentRequest.getId().intValue() == gitlabMergeRequest.gitlabMergeRequest.getId() &&
+                            currentRequest.getIid().intValue() == gitlabMergeRequest.gitlabMergeRequest.getIid()) {
+                        RMCommentsObservable.getInstance().refreshRequest(gitlabMergeRequest);
+                    }
+                }
                 String reviewer = FilterBean.getInstance().getReviewer();
                 if (reviewer != null && !reviewer.trim().isEmpty() && (gitlabMergeRequest.gitlabMergeRequest.getAssignee() == null || !gitlabMergeRequest.gitlabMergeRequest.getAssignee().getName().toLowerCase().contains(reviewer.toLowerCase()))) {
                     continue;

@@ -20,7 +20,6 @@ public final class AcceptAction extends RequestDetailAction {
             Messages.showMessageDialog("The merge request has been closed or merged.", "Merge Fail", AllIcons.Ide.Error);
         } else {
             GitLabUtil.getInstance(e.getProject()).acceptRequest(mergeRequest);
-            RMListObservable.getInstance().refreshList();
         }
     }
 

@@ -102,7 +102,7 @@ public class CreateMergeRequestDialog extends DialogWrapper {
                         refreshRepoBox();
                         refreshRemoteBox();
                     }
-                },ModalityState.any());
+                }, ModalityState.any());
                 initProgressIndicator = null;
             }
         }.queue();
@@ -252,18 +252,36 @@ public class CreateMergeRequestDialog extends DialogWrapper {
             Messages.showMessageDialog("Merge title cannot be empty.", "Create Merge Request Fail", AllIcons.Ide.Error);
             return;
         }
-        List<GitCommit> diffBetweenBranchs = gitlabUtil.getDiffBetweenBranchs(curRepository, curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()));
-        if (diffBetweenBranchs != null && diffBetweenBranchs.size() > 0) {
-            GitLabUtil instance = GitLabUtil.getInstance(project);
-            GitlabMergeRequest gitlabMergeRequest = instance.addMergeRequest(curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()), userId, title);
-            if (gitlabMergeRequest != null) {
-                StatusBar.Info.set("Create Merge Request Success", project);
+        int finalUserId = userId;
+        new Task.Backgroundable(project, "Compare the Two Branches...") {
+            @Override
+            public void run(@NotNull ProgressIndicator indicator) {
+                List<GitCommit> diffBetweenBranchs = gitlabUtil.getDiffBetweenBranchs(curRepository, curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()));
+                if (diffBetweenBranchs != null && diffBetweenBranchs.size() > 0) {
+                    GitLabUtil instance = GitLabUtil.getInstance(project);
+                    GitlabMergeRequest gitlabMergeRequest = instance.addMergeRequest(curRemoteBranches.get(sourceBranch.getSelectedIndex()), curRemoteBranches.get(targetBranch.getSelectedIndex()), finalUserId, title);
+                    if (gitlabMergeRequest != null) {
+                        indicator.setText("Create Merge Request Success");
+                        ApplicationManager.getApplication().invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                CreateMergeRequestDialog.super.doOKAction();
+                            }
+                        }, ModalityState.any());
+                    }
+                    instance.getAllRequest();
+                } else {
+                    ApplicationManager.getApplication().invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            Messages.showMessageDialog("Nothing to merge from " + branchSource + "into " + branchTarget + ".", "Create Merge Request Fail", AllIcons.Ide.Error);
+                        }
+                    }, ModalityState.any());
+                }
+
             }
-            instance.getAllRequest();
-        } else {
-            Messages.showMessageDialog("Nothing to merge from " + branchSource + "into " + branchTarget + ".", "Create Merge Request Fail", AllIcons.Ide.Error);
-        }
-        super.doOKAction();
+        }.queue();
+
     }
 
     @Nullable

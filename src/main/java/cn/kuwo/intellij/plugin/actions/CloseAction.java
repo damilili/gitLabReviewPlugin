@@ -19,9 +19,9 @@ public final class CloseAction extends RequestDetailAction {
             Messages.showMessageDialog("The merge request has been closed or merged.", "Close Fail", AllIcons.Ide.Error);
         } else {
             GitLabUtil.getInstance(e.getProject()).closeRequest(mergeRequest);
-            RMListObservable.getInstance().refreshList();
         }
     }
+
     @Override
     public void update(AnActionEvent e) {
         if (mergeRequest.getState().equals("closed") || mergeRequest.getState().equals("merged")) {
